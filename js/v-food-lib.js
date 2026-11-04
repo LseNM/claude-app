@@ -1,6 +1,7 @@
 "use strict";
-/* Ăn: the full menu (Diet/Thực đơn 1 ngày - 1540 kcal.html). Tra cứu: searchable cards with multi-select filters. */
-VIEWS.food = el => {
+/* Ăn → Thực đơn: the full menu (Diet/Thực đơn 1 ngày - 1540 kcal.html). Tra cứu: searchable cards with multi-select filters.
+   (The Ăn tab itself — Nhật ký / Thực đơn / Tiến độ — lives in v-food.js.) */
+const FOOD_MENU = el => {
   const L = meal("lunch", 0), Dn = meal("dinner", 0), tot = [BREAKFAST_SUM[0] + L.kcal + Dn.kcal, BREAKFAST_SUM[1] + L.prot + Dn.prot, BREAKFAST_SUM[2] + L.fib + Dn.fib];
   const row = (e, n, a, k, p, f) => `<tr><td>${e} ${n}</td><td>${a}</td><td class="n">${k}</td><td class="n">${p} g</td><td class="n">${f} g</td></tr>`;
   el.innerHTML = `

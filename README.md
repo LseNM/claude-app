@@ -7,7 +7,12 @@ App cá nhân (PWA) cho challenge body recomposition 09/11/2026 → Tết 06/02/
 | 🏠 Hôm nay | Cân + vòng eo, checklist 8 việc (giữ lửa ≥ 5/8), cốc nước, chọn món mặn (trưa = tối), lịch một ngày chuẩn, xuất tổng kết cho Claude Project |
 | 🏋️ Gym | Buổi A/B/C, bản không máy tới 30/11, có máy từ 01/12; log kg × rep × RIR từng set, đổi bài khi máy bận, gợi ý tăng tạ (double progression), đồng hồ nghỉ, hướng dẫn + video từng bài, xuất log |
 | 🗓️ Lộ trình | Gantt giai đoạn (target, checklist, phần thưởng, target sức mạnh), Tuần (review Chủ nhật + quy tắc chỉnh calo), Tháng (heatmap, ảnh, đường cân vs target) |
-| 🍽️ Ăn | Thực đơn 1,540 kcal (theo file `Diet/Thực đơn 1 ngày - 1540 kcal.html` trong vault) |
+| 🍽️ Ăn | **Nhật ký** 4 bữa (vòng calo + thanh protein/carb/fat/xơ), thêm món bằng 📸 chụp hình · 🔍 gõ tên · 🎤 nói · ✏️ tự nhập, nút ✅ "ăn đúng thực đơn"; **Thực đơn** 1,540 kcal (theo file `Diet/Thực đơn 1 ngày - 1540 kcal.html` trong vault); **Tiến độ** calo, protein, tỉ lệ macro 7/14/30 ngày |
+
+## AI ước tính macro (không cần server, không phát sinh phí)
+- **Mặc định: Claude.** Nút 📸 copy sẵn lời nhắc và gửi ảnh sang app Claude (gói Claude đang dùng). Claude trả về một khối JSON; bấm Copy, quay lại app, bấm **Dán kết quả**. Nếu app bị đóng giữa chừng, thanh "Đang chờ kết quả Claude" sẽ hiện lại.
+- **Tùy chọn: Gemini miễn phí.** Dán key vào ☰ Cài đặt thì có nút ⚡ một chạm. Key phải tạo trong **project không bật billing** (AI Studio ghi Plan: Free). Hết lượt thì Google trả lỗi 429 chứ không tính tiền. Key chỉ lưu trên trình duyệt đó, không vào file sao lưu.
+- Cũng dùng để đọc tờ **InBody** (tab Lộ trình → giai đoạn → 📸 Chụp tờ InBody).
 | 🔍 Tra cứu | Thẻ bài tập + món ăn, bộ lọc chọn nhiều ô |
 
 ## Dữ liệu ở đâu

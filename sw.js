@@ -1,7 +1,7 @@
 /* Offline support: cache the app shell; network-first for HTML so updates arrive, cache-first for the rest. Bump VERSION on every release. */
-const VERSION = "tetbody-1.0.0";
-const SHELL = ["./", "index.html", "manifest.webmanifest", "css/app.css", "css/app2.css", "js/fx.js", "js/data.js", "js/store.js", "js/ex.js", "js/ex-extra.js", "js/app.js",
-  "js/v-today.js", "js/v-gym.js", "js/v-plan.js", "js/v-food-lib.js", "icons/icon-192.png", "icons/icon-512.png", "icons/maskable-512.png"];
+const VERSION = "tetbody-1.1.0";
+const SHELL = ["./", "index.html", "manifest.webmanifest", "css/app.css", "css/app2.css", "css/food.css", "js/fx.js", "js/data.js", "js/store.js", "js/ex.js", "js/ex-extra.js", "js/app.js",
+  "js/ai.js", "js/v-today.js", "js/v-gym.js", "js/v-plan.js", "js/v-food-lib.js", "js/v-food.js", "icons/icon-192.png", "icons/icon-512.png", "icons/maskable-512.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== VERSION).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener("fetch", e => {

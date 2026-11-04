@@ -77,7 +77,8 @@
     <div class="card phase-head"><span class="dot" style="background:${ph.color}"></span><div><h2>${ph.name}</h2><div class="meta">${dm(ph.f)} → ${dm(ph.t)}${ph.weeks ? " · " + ph.weeks : ""} · ${ph.focus}</div></div>
       <span class="chip ${TODAY >= ph.f && TODAY <= ph.t ? "red" : ""}">${TODAY >= ph.f && TODAY <= ph.t ? "📍 Đang ở đây · " : ""}${state}</span>
       <div class="ring"><svg width="62" height="62" viewBox="0 0 62 62" aria-hidden="true"><circle cx="31" cy="31" r="24" fill="none" stroke="#fdf0e0" stroke-width="8"/><circle cx="31" cy="31" r="24" fill="none" stroke="${ph.color}" stroke-width="8" stroke-linecap="round" stroke-dasharray="${C * pct / 100} ${C}" transform="rotate(-90 31 31)"/><text x="31" y="36" text-anchor="middle" font-size="15" font-weight="800" fill="#2b1d14">${pct}%</text></svg><span class="muted small" style="font-weight:600">checklist<br>${done}/${tot} xong</span></div></div>
-    <div class="card"><h3>🎯 Target số đo <span class="sub">sửa ô đỏ được</span></h3>${metricRows(ph)}<p class="muted small" style="margin:10px 0 0">Cân TB 7 ngày và eo lấy từ số bạn ghi ở tab Hôm nay. PBF/SMM/Mỡ: gõ kết quả InBody vào ô "Hiện tại".</p></div>
+    <div class="card"><h3>🎯 Target số đo <span class="sub">sửa ô đỏ được</span></h3>${metricRows(ph)}<p class="muted small" style="margin:10px 0 0">Cân TB 7 ngày và eo lấy từ số bạn ghi ở tab Hôm nay. PBF/SMM/Mỡ: gõ kết quả InBody vào ô "Hiện tại", hoặc chụp tờ kết quả để AI đọc giúp.</p>
+      <button class="btn ghost" id="ibScan" style="margin-top:10px">📸 Chụp tờ InBody → AI đọc số</button></div>
     <div class="card"><h3>✅ Checklist mục tiêu <span class="sub">tick → 🎉</span></h3>
       <div id="cl">${tot ? ph.checklist.map((c, i) => `<div class="tick ${st.done[i] ? "on" : ""}" data-i="${i}"><span class="box"></span><span class="t">${c}</span></div>`).join("") : `<div class="muted">Chặng 2 sẽ lập chi tiết sau Tết.</div>`}</div>
       <div class="reward"><span class="g">🎁</span><div style="flex:1"><small>PHẦN THƯỞNG KHI QUA GIAI ĐOẠN · BẠN TỰ ĐẶT</small><input id="rw" value="${esc(p.rewards[ph.id] || "")}" placeholder="Gõ phần thưởng…" aria-label="Phần thưởng"></div></div></div>
@@ -86,6 +87,7 @@
         return `<tr class="${ok ? "ok" : ""}"><td>${exName(id)}</td><td class="n"><input class="mi sm" data-sk="${j}" value="${kg}" aria-label="Target kg ${exName(id)}"> × ${r}</td><td class="n">${b ? `${b.kg} × ${b.reps}` : "—"}</td><td class="n">${ok ? "✓" : ""}</td></tr>`; }).join("")}</table>`
         : `<div class="muted">Chưa đặt target sức mạnh cho giai đoạn này (file cá nhân có sẵn bản nháp).</div>`}
       <p class="muted small" style="margin:10px 0 0">"Tốt nhất" lấy từ set đã tick ✓ ở tab Gym.${ph.f <= NOMACHINE_UNTIL ? " Giai đoạn này đo bằng bài không máy (tới 30/11)." : ""}</p></div>`;
+    $("#ibScan").onclick = () => pickImage(img => AI.open({ kind: "inbody", title: "📊 Đọc tờ InBody", img, meta: { ph: ph.id } }), 1600);
     $("#cl").onclick = e => { const r = e.target.closest(".tick"); if (!r) return; const i = +r.dataset.i; st.done[i] = st.done[i] ? 0 : 1; Store.save(); refreshHeader();
       if (st.done[i]) { if (ph.checklist.every((_, j) => st.done[j])) { FX.cheer("✅", "Xong mục tiêu", ""); setTimeout(() => win(ph), 900); } else FX.celebrate({ xp: 25 }); } drawGantt(); detail(); };
     $("#detail").onchange = e => {

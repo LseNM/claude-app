@@ -55,7 +55,7 @@ VIEWS.today = el => {
     const k = r.dataset.k;
     if (k === "move" && plan.k === "gym" && g && g.finished) { FX.cheer("🏋️", "Buổi tập đã xong", "tick tự động từ tab Gym"); return; }
     const before = Object.values(ticksOn(TODAY)).filter(Boolean).length;
-    d.ticks[k] = d.ticks[k] ? 0 : 1; Store.save();
+    d.ticks[k] = d.ticks[k] ? 0 : 1; Store.save(); syncPlanFromTick(TISO, k, !!d.ticks[k]); drawMenu();
     const after = Object.values(ticksOn(TODAY)).filter(Boolean).length;
     if (d.ticks[k]) {
       if (after === CHECKS.length) FX.celebrate({ big: true, emoji: "🎆", title: "Ngày hoàn hảo!", sub: `🔥 ${streak()} ngày giữ lửa · +80 XP` });
@@ -74,7 +74,9 @@ VIEWS.today = el => {
         <select id="mainSel" aria-label="Món mặn cho cả trưa và tối">${MAINS.map((x, i) => `<option value="${i}" ${i === mi ? "selected" : ""}>${x[0]} ${x[1]} ${x[2]} · cơm ${x[5]} g</option>`).join("")}</select>
         <div class="items">Mỗi bữa: cơm <b>${mm[5]} g</b> + ${mm[1].toLowerCase()} ${mm[2]} (~22 g đạm) + rau luộc 100 g + 1 chén canh củ thịt bằm${mm[6] >= 10 ? `<br><b style="color:var(--c2)">⚠️ ${mm[6]} g fat/phần: chỉ 1 bữa/ngày${mm[6] >= 14 ? ", 1–2 lần/tuần" : ""}</b>` : ""}</div></div>
       <div class="meal two"><div><b>🌤️ Trưa</b> <span class="k">${L.kcal} kcal · ${Math.round(L.prot)} g</span><div class="items">+ 🍈 1 trái ổi</div></div><div><b>🌙 Tối</b> <span class="k">${Dn.kcal} kcal · ${Math.round(Dn.prot)} g</span><div class="items">+ 🍎 ½ táo · 🥣 sữa chua Vinamilk</div></div></div>
-      <div class="tot">${m("Calo", K, 1540, 1800, K > 1600 ? "#eb6834" : "#e8a317", "kcal")}${m("Protein", Pr, 118, 140, Pr >= 110 ? "#1f9a63" : "#eb6834", "g")}${m("Chất xơ", F, 20, 30, F >= 20 ? "#1f9a63" : "#eb6834", "g")}</div>`;
-    $("#mainSel").onchange = e => { d.main = +e.target.value; Store.save(); drawMenu(); FX.cheer(MAINS[d.main][0], "Đã đổi món mặn", `cơm ${MAINS[d.main][5]} g mỗi bữa để vẫn ~540 kcal`); };
+      ${(() => { const T = foodTotals(TISO); return T.n
+        ? `<div class="eaten"><div class="eh"><b>📝 Đã ghi hôm nay</b><a href="#food/log">nhật ký →</a></div><div class="tot">${m("Calo", T.k, 1540, 1900, T.k > 1640 ? "#eb6834" : "#1f9a63", "kcal")}${m("Protein", T.p, 118, 140, "#2a78d6", "g")}</div></div>`
+        : `<div class="eaten none"><span>Kế hoạch nếu ăn đúng: ~${fmt(K)} kcal · ~${fmt(Pr)} g protein · ${fmt(F)} g xơ</span><a class="btn ghost" href="#food/log">📸 Ghi món ăn</a></div>`; })()}`;
+    $("#mainSel").onchange = e => { d.main = +e.target.value; Store.save(); refreshPlanMains(TISO); drawMenu(); FX.cheer(MAINS[d.main][0], "Đã đổi món mặn", `cơm ${MAINS[d.main][5]} g mỗi bữa để vẫn ~540 kcal`); };
   }
 };

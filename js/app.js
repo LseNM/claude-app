@@ -104,6 +104,12 @@ function pickPhoto(key, done) {
   inp.onchange = () => { const f = inp.files[0]; if (!f) return; shrink(f, 520).then(url => { Store.all.photos[key] = url; Store.save(); FX.cheer("📸", "Đã lưu ảnh", "chỉ lưu trên máy này"); done ? done() : render(); }); };
   inp.click();
 }
+/* camera or gallery → shrunk JPEG data URL (food photos ~1024 px is plenty for AI; InBody sheets 1600 px so small print stays readable) */
+function pickImage(cb, max = 1024) {
+  const inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/*";
+  inp.onchange = () => { const f = inp.files[0]; if (f) shrink(f, max).then(cb); };
+  inp.click();
+}
 function shrink(file, max) {
   return new Promise(res => { const img = new Image(), r = new FileReader();
     r.onload = () => { img.onload = () => { const k = Math.min(1, max / Math.max(img.width, img.height)), c = document.createElement("canvas"); c.width = img.width * k; c.height = img.height * k;
@@ -147,9 +153,13 @@ function dayExport(d) {
   const t = ticksOn(d), miss = CHECKS.filter(c => !t[c[0]]).map(c => c[0] === "move" ? MOVE_LABEL(d) : c[1]);
   const g = Store.gym(iso(d)), rows = workoutRows(d);
   const kcal = Math.round(BREAKFAST_SUM[0] + L.kcal + Dn.kcal), prot = Math.round(BREAKFAST_SUM[1] + L.prot + Dn.prot);
+  const fl = foodList(iso(d)), T = foodTotals(iso(d));
+  const eat = fl.length ? [`Ăn (nhật ký): ${fmt(T.k)} kcal · P ${fmt(T.p)} g · C ${fmt(T.c)} g · F ${fmt(T.f)} g · xơ ${fmt(T.fb)} g`,
+    ...MEALS.map(([k, , t]) => { const it = fl.filter(f => f.m === k); return it.length ? `- ${t}: ${it.map(f => `${f.n}${f.g ? ` ${f.g} g` : ""} (${f.k} kcal${f.src === "photo" || f.src === "text" ? ", AI ước" : ""})`).join("; ")}` : null; }).filter(Boolean)]
+    : [`Ăn theo thực đơn chuẩn: sáng chuẩn; trưa = tối món mặn ${m[1]} ${m[2]}, cơm ${m[5]} g, rau luộc 100 g, canh; trưa 1 ổi; tối ½ táo + sữa chua (ước ~${fmt(kcal)} kcal, ~${prot} g protein nếu ăn đúng). Ghi thêm phần nào ăn khác.`];
   return [`📋 Tết Body · ${iso(d)} (${WD[d.getDay()]}) · ${MOVE_LABEL(d)}`,
     `Cân sáng: ${x.w ? x.w + " kg" : "—"}${x.waist ? ` · Eo: ${x.waist} cm` : ""}`,
-    `Ăn theo thực đơn chuẩn: sáng chuẩn; trưa = tối món mặn ${m[1]} ${m[2]}, cơm ${m[5]} g, rau luộc 100 g, canh; trưa 1 ổi; tối ½ táo + sữa chua (ước ~${fmt(kcal)} kcal, ~${prot} g protein nếu ăn đúng). Ghi thêm phần nào ăn khác.`,
+    ...eat,
     `Nước: ${fmt((x.water || 0) * .25, 2).replace(/0$/, "")} L · Checklist: ${Object.values(t).filter(Boolean).length}/${CHECKS.length}${miss.length ? " (chưa: " + miss.join(", ") + ")" : ""}`,
     ...(g ? [`Cảm giác trước tập: ${{ low: "mệt", ok: "bình thường", high: "khỏe" }[g.feel] || "—"}`] : []),
     ...(rows.length ? ["", "## Workout", "| Exercise | Set | kg | Reps | RIR |", "|---|---|---|---|---|", ...rows] : [])].join("\n");
@@ -167,6 +177,18 @@ function openSettings() {
     <div class="row2"><button class="btn" id="impP">📥 Nhập file cá nhân / sao lưu</button></div>
     <label class="fld">Tên<input id="sName" value="${esc(p.name || "")}" placeholder="Grace"></label>
     <label class="fld">Câu "vì sao"<input id="sWhy" value="${esc(p.vision || "")}" placeholder="Diện áo dài đón Tết…"></label>
+    <h4>🤖 AI ước tính macro ${Store.geminiKey() ? '<span class="chip green">Gemini: đã có key</span>' : '<span class="chip">mặc định: Claude</span>'}</h4>
+    <p class="muted small">Không cần gì thêm: nút 📸 sẽ gửi ảnh sang app Claude (gói bạn đang dùng), rồi bạn dán kết quả lại. Muốn bấm một lần là ra số thì thêm key <b>Gemini miễn phí</b>:</p>
+    <details class="small keyhow"><summary><b>Cách tạo key không bao giờ bị tính tiền</b></summary><ol>
+      <li>Mở <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> → <b>Create API key</b> → chọn <b>tạo trong project mới</b>.</li>
+      <li><b>Đừng</b> dùng project FitTracker hay project nào đã gắn thẻ/billing (Firebase gói Blaze). Project có billing thì Gemini tính tiền.</li>
+      <li>Trong AI Studio, cột <b>Plan</b> của key phải ghi <b>Free</b>. Hết lượt miễn phí thì app chỉ báo lỗi, không trừ tiền.</li>
+      <li>Lưu ý: ở gói miễn phí, Google có thể dùng ảnh gửi lên để cải thiện sản phẩm. Ảnh không muốn chia sẻ thì dùng nút Claude.</li></ol></details>
+    <label class="fld">Key Gemini (chỉ lưu trên máy này, không vào file sao lưu)<input id="gKey" type="password" autocomplete="off" value="${esc(Store.geminiKey())}" placeholder="AIza…"></label>
+    <div class="row2"><button class="btn ghost" id="gSave">💾 Lưu key</button><button class="btn ghost" id="gTest">🧪 Thử key</button>${Store.geminiKey() ? `<button class="btn ghost" id="gDel">Xóa key</button>` : ""}</div>
+    <h4>🍽️ Lịch sử món ăn <span class="chip">${Store.all.foodHist.length} món</span></h4>
+    <p class="muted small">Món đã ăn hiện ra khi gõ tên. Nhập file <b>Export food list.csv</b> của FitTracker để có sẵn món cũ.</p>
+    <div class="row2"><button class="btn ghost" id="impCsv">📥 Nhập CSV FitTracker</button></div>
     <h4>💾 Sao lưu</h4>
     <p class="muted small">Dữ liệu chỉ nằm trong trình duyệt của máy này. Thỉnh thoảng xuất bản sao lưu vào OneDrive.</p>
     <div class="row2"><button class="btn ghost" id="expB">📤 Xuất sao lưu (.json)</button></div>
@@ -181,9 +203,30 @@ function openSettings() {
       $("#impP", bg).onclick = () => { const inp = document.createElement("input"); inp.type = "file"; inp.accept = ".json,application/json";
         inp.onchange = () => { const f = inp.files[0]; if (!f) return; f.text().then(t => { try { const k = Store.importJSON(t); close(); FX.celebrate({ emoji: "✅", title: k === "personal" ? "Đã nhập dữ liệu cá nhân" : "Đã khôi phục sao lưu", sub: "" }); drawHeader(); render(); } catch (err) { alert(err.message); } }); };
         inp.click(); };
+      $("#gSave", bg).onclick = () => { const k = $("#gKey", bg).value.trim(); Store.setGeminiKey(k); FX.cheer("🔑", k ? "Đã lưu key Gemini" : "Đã xóa key", "chỉ trên máy này"); };
+      $("#gTest", bg).onclick = async () => { const k = $("#gKey", bg).value.trim(); if (!k) return FX.cheer("⚠️", "Chưa có key", ""); Store.setGeminiKey(k);
+        $("#gTest", bg).textContent = "⏳ Đang thử…"; try { await AI.testKey(); FX.cheer("✅", "Key chạy tốt", "nút ⚡ Gemini đã bật"); } catch (e) { FX.cheer("⚠️", "Key chưa chạy", e.message); } $("#gTest", bg).textContent = "🧪 Thử key"; };
+      const gd = $("#gDel", bg); if (gd) gd.onclick = () => { Store.setGeminiKey(""); close(); openSettings(); };
+      $("#impCsv", bg).onclick = () => { const inp = document.createElement("input"); inp.type = "file"; inp.accept = ".csv,text/csv";
+        inp.onchange = () => { const f = inp.files[0]; if (!f) return; f.text().then(t => { try { const n = Store.importFoods(fitTrackerCSV(t)); close(); FX.celebrate({ emoji: "🍽️", title: `Đã nhập ${n} món`, sub: "gõ tên là thấy" }); } catch (err) { alert(err.message); } }); };
+        inp.click(); };
       $("#expB", bg).onclick = () => { const b = new Blob([Store.exportJSON()], { type: "application/json" }), a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = `tet-body-saoluu-${TISO}.json`; a.click(); };
       $("#rst", bg).onclick = () => { if (confirm("Xóa hết log, tick, ảnh và dữ liệu cá nhân trên máy này? Không hoàn tác được.")) { Store.reset(); close(); drawHeader(); render(); } };
     });
+}
+
+/* FitTracker "Export food list.csv" → food rows (values are for the portion that was logged) */
+function fitTrackerCSV(text) {
+  const rows = [], t = text.replace(/^﻿/, ""); let cur = [], f = "", q = false;
+  for (let i = 0; i < t.length; i++) { const ch = t[i];
+    if (q) { if (ch === '"' && t[i + 1] === '"') { f += '"'; i++; } else if (ch === '"') q = false; else f += ch; }
+    else if (ch === '"') q = true; else if (ch === ",") { cur.push(f); f = ""; } else if (ch === "\n" || ch === "\r") { if (ch === "\r" && t[i + 1] === "\n") i++; cur.push(f); rows.push(cur); cur = []; f = ""; } else f += ch; }
+  if (f || cur.length) { cur.push(f); rows.push(cur); }
+  const h = rows.shift().map(x => x.trim()), ix = k => h.indexOf(k);
+  if (ix("food_name") < 0 || ix("calories") < 0) throw new Error("Không phải file Export food list của FitTracker (thiếu cột food_name, calories).");
+  const n = v => { const x = parseFloat(v); return isNaN(x) ? 0 : Math.round(x * 10) / 10; };
+  return rows.filter(r => r.length > 1 && r[ix("food_name")]).map(r => { const g = n(r[ix("serving_size")]), unit = (r[ix("serving_unit")] || "").trim();
+    return { n: r[ix("food_name")].trim(), g: unit === "g" && g >= 10 ? g : null, k: Math.round(n(r[ix("calories")])), p: n(r[ix("protein")]), c: n(r[ix("carbs")]), f: n(r[ix("fat")]), fb: n(r[ix("fiber")]) }; });
 }
 
 /* ---------- tooltips ---------- */
@@ -203,7 +246,11 @@ function openSettings() {
 /* ---------- router ---------- */
 const VIEWS = {};
 const currentView = () => { const v = (location.hash || "#today").slice(1).split("/")[0]; return VIEWS[v] ? v : "today"; };
-function render() { const v = currentView(); markNav(); const el = $("#view"); el.innerHTML = ""; el.className = "wrap v-" + v; VIEWS[v](el); window.scrollTo(0, 0); }
+function render() {
+  const v = currentView(); markNav(); const el = $("#view"); el.innerHTML = ""; el.className = "wrap v-" + v; VIEWS[v](el);
+  const b = AI.banner(); if (b) el.insertAdjacentHTML("afterbegin", b);
+  window.scrollTo(0, 0);
+}
 addEventListener("hashchange", render);
 addEventListener("DOMContentLoaded", () => {
   drawHeader(); render();

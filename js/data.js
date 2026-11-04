@@ -3,7 +3,7 @@
    personal JSON that each device imports once — never in this file.
    Sources: vault 2. Areas/Health — Challenge.html, Body Recomposition.html, Diet/Thực đơn 1 ngày - 1540 kcal.html,
    Strength Training/*. */
-const APP_VERSION = "1.0.0";
+const APP_VERSION = "1.1.0";
 const START = new Date(2026, 10, 9), END = new Date(2027, 0, 31), TET = new Date(2027, 1, 6);
 const NOMACHINE_UNTIL = new Date(2026, 10, 30);
 const TARGET = { kcal: 1540, protein: 118, proteinMin: 110, fiber: 20, water: 2.5, steps: 7000, sleep: 7.5 };
@@ -95,21 +95,29 @@ const DAY_MID = {
 
 /* ---------- menu: copied from Diet/Thực đơn 1 ngày - 1540 kcal.html ----------
    Breakfast fixed. Lunch = dinner: cơm + 3 món. Only extras differ: lunch always 1 guava; dinner ½ apple + Greek yogurt. */
-const BREAKFAST = [["🥄", "Whey", "½ muỗng (~15 g)", 60, 12, 0], ["🥛", "Sữa đậu nành không đường", "200 ml", 80, 7, 1], ["🍌", "Chuối (hoặc ¼ bơ)", "½ trái (~60 g)", 53, .6, 1.6],
-  ["⚫", "Hạt chia", "1 muỗng cà phê (~5 g)", 25, 1, 1.7], ["🌾", "Yến mạch", "20 g (~2 muỗng canh)", 76, 2.7, 2], ["🥚", "Trứng luộc", "2 quả", 156, 13, 0]];
+/* columns: emoji, name, amount, kcal, protein, fiber, carb, fat (carb/fat from the same file's tables) */
+const BREAKFAST = [["🥄", "Whey", "½ muỗng (~15 g)", 60, 12, 0, 1.5, .8], ["🥛", "Sữa đậu nành không đường", "200 ml", 80, 7, 1, 3.5, 4], ["🍌", "Chuối (hoặc ¼ bơ)", "½ trái (~60 g)", 53, .6, 1.6, 13.7, .2],
+  ["⚫", "Hạt chia", "1 muỗng cà phê (~5 g)", 25, 1, 1.7, 2.1, 1.5], ["🌾", "Yến mạch", "20 g (~2 muỗng canh)", 76, 2.7, 2, 13.2, 1.4], ["🥚", "Trứng luộc", "2 quả", 156, 13, 0, 1.1, 10.6]];
 const MAINS = [["🐖", "Thịt heo nạc (thăn, đùi)", "85 g", "115 g", 123, 130, 4], ["🐟", "Cá thu", "93 g", "125 g", 147, 110, 6], ["🐟", "Cá ngừ", "76 g", "105 g", 99, 150, 1],
   ["🦑", "Mực", "105 g", "140 g", 130, 125, 2], ["🦐", "Tôm (bóc vỏ)", "92 g", "125 g", 91, 155, .5], ["🥩", "Thịt bò nạc", "85 g", "115 g", 212, 60, 14], ["🍗", "Ức gà", "71 g", "95 g", 117, 135, 3],
   ["🐟", "Cá basa", "96 g", "130 g", 125, 130, 4], ["🥢", "Đậu phụ 100 g + ức gà 45 g", "145 g", "100 + 60 g", 151, 110, 7], ["🍗", "Đùi gà bỏ da", "85 g", "115 g", 178, 90, 10], ["🐟", "Cá hồi", "88 g", "120 g", 183, 85, 11]];
-const PLATE = { seasoning: ["🧂", "Gia vị kho: dầu + đường + nước mắm", "½ + 1 + 1 muỗng cà phê", 38, 0, 0], veg: ["🥦", "Rau luộc 4 loại", "100 g", 44, 2.5, 3.4],
-  soup: ["🍲", "Canh: củ + thịt nạc bằm", "1 chén: 80 g củ + 30 g thịt sống", 62, 6.5, 1.2] };
+const PLATE = { seasoning: ["🧂", "Gia vị kho: dầu + đường + nước mắm", "½ + 1 + 1 muỗng cà phê", 38, 0, 0, 4, 2.3], veg: ["🥦", "Rau luộc 4 loại", "100 g", 44, 2.5, 3.4, 8.5, .3],
+  soup: ["🍲", "Canh: củ + thịt nạc bằm", "1 chén: 80 g củ + 30 g thịt sống", 62, 6.5, 1.2, 5, 2.2] };
 const VEG = [["🥦", "Bông cải xanh", 9, .8], ["🫛", "Đậu Hà Lan", 21, 1.4], ["🥕", "Cà rốt", 9, .8], ["🥬", "Bắp cải", 6, .5]];
-const EXTRAS = { lunch: [["🍈", "Ổi 1 trái (~150 g)", 102, 3.8, 8.1]], dinner: [["🍎", "½ trái táo (~90 g)", 47, .2, 2.2], ["🥣", "Sữa chua Vinamilk không đường 1 hũ 100 g", 65, 4, 0]] };
+/* columns: emoji, name, kcal, protein, fiber, carb, fat */
+const EXTRAS = { lunch: [["🍈", "Ổi 1 trái (~150 g)", 102, 3.8, 8.1, 21.5, 1.4]], dinner: [["🍎", "½ trái táo (~90 g)", 47, .2, 2.2, 12.4, .2], ["🥣", "Sữa chua Vinamilk không đường 1 hũ 100 g", 65, 4, 0, 5.3, 3.2]] };
+/* cooked white rice per gram: 1.3 kcal, 3.5/130 g protein, 0.28 g carb, 0.4/130 g fat, 0.5/130 g fiber (file: 130 g = 169 kcal, 3.5 g P, 36 g C, 0.4 g F) */
 function meal(which, i) {
-  const [, , , , k, rice] = MAINS[i], ex = EXTRAS[which], f = [PLATE.seasoning, PLATE.veg, PLATE.soup];
+  const [, , , , k, rice, mf] = MAINS[i], ex = EXTRAS[which], f = [PLATE.seasoning, PLATE.veg, PLATE.soup];
   const sum = j => f.reduce((a, x) => a + x[j], 0) + ex.reduce((a, e) => a + e[j - 1], 0);
-  return { kcal: Math.round(k + rice * 1.3 + sum(3)), prot: 22 + rice * 3.5 / 130 + sum(4), fib: rice * .5 / 130 + sum(5), rice };
+  return { kcal: Math.round(k + rice * 1.3 + sum(3)), prot: 22 + rice * 3.5 / 130 + sum(4), fib: rice * .5 / 130 + sum(5), carb: rice * .28 + sum(6), fat: mf + rice * .4 / 130 + sum(7), rice };
 }
-const BREAKFAST_SUM = BREAKFAST.reduce((a, b) => [a[0] + b[3], a[1] + b[4], a[2] + b[5]], [0, 0, 0]);
+/* [kcal, protein, fiber, carb, fat] */
+const BREAKFAST_SUM = BREAKFAST.reduce((a, b) => [a[0] + b[3], a[1] + b[4], a[2] + b[5], a[3] + b[6], a[4] + b[7]], [0, 0, 0, 0, 0]);
+/* daily macro targets (menu file: protein 110–118 g, carb 150–180 g, fat 35–50 g, fiber ≥ 20 g) */
+const MACRO_T = { k: { lab: "Calo", u: "kcal", lo: 1440, t: 1540, hi: 1640, max: 1900 }, p: { lab: "Protein", u: "g", lo: 110, t: 118, hi: 999, max: 140 },
+  c: { lab: "Carb", u: "g", lo: 150, t: 165, hi: 180, max: 220 }, f: { lab: "Fat", u: "g", lo: 35, t: 42, hi: 50, max: 65 }, fb: { lab: "Chất xơ", u: "g", lo: 20, t: 25, hi: 999, max: 35 } };
+const MEALS = [["bf", "☀️", "Sáng"], ["lunch", "🌤️", "Trưa"], ["dinner", "🌙", "Tối"], ["snack", "🍪", "Vặt"]];
 
 /* ---------- daily checklist ---------- */
 const CHECKS = [["weigh", "Cân buổi sáng", "06:45"], ["water", "Uống 2.5 L nước", ""], ["steps", "Đi đủ 7,000 bước", ""], ["bf", "Sáng chuẩn (450 kcal · 36 g)", "07:00"],
