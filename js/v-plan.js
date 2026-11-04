@@ -4,6 +4,47 @@
   let sub = "gantt", sel = (phaseAt(TODAY) || PHASES[0]).id, zoom = "tet", weekOff = 0, monthOff = 0;
   const personal = () => { const p = Store.personal() || { kind: "tet-body-personal" }; p.targets = p.targets || {}; p.rewards = p.rewards || {}; p.strength = p.strength || {}; p.inbody = p.inbody || {}; return p; };
   const savePersonal = p => Store.setPersonal(p);
+  /* ---------------- InBody: analysis of the latest sheet (numbers come from the personal file, never from the code) ---------------- */
+  function inbody(el) {
+    const L = personal().inbodyLog || [], r = L[L.length - 1];
+    if (!r) { el.innerHTML = `${noPersonal()}<section class="card"><h3>Chưa có kết quả InBody</h3><p class="small">Nhập file cá nhân (☰ Cài đặt), hoặc vào Gantt → chọn giai đoạn → 📸 Chụp tờ InBody.</p></section>`; return; }
+    const R = r.range || {}, D = s => `${s.slice(8)}/${s.slice(5, 7)}/${s.slice(0, 4)}`, f1v = v => Number.isInteger(v) ? fmt(v) : String(v);
+    const st = (k, v) => { const g = R[k]; if (!g || v == null) return ["", ""]; return v < g[0] ? ["warn", "dưới chuẩn"] : v > g[1] ? ["warn", "trên chuẩn"] : ["ok", "trong chuẩn"]; };
+    const smmPct = r.smmStd ? r.smm / r.smmStd * 100 : null;
+    const T = [["w", "Cân nặng", "kg"], ["pbf", "Tỉ lệ mỡ (PBF)", "%"], ["smm", "Cơ xương (SMM)", "kg"], ["fat", "Khối mỡ", "kg"], ["vfl", "Mỡ nội tạng", "level"], ["whr", "Eo / hông", ""], ["tbw", "Nước", "L"], ["prot", "Protein", "kg"], ["bmr", "Trao đổi chất (BMR)", "kcal"]];
+    const tile = ([k, lab, u]) => { const v = r[k]; if (v == null) return ""; let [s, txt] = st(k, v); if (k === "smm" && smmPct) { s = smmPct < 90 ? "warn" : "ok"; txt = `≈ ${fmt(smmPct)}% chuẩn${smmPct < 90 ? " · thiếu" : ""}`; }
+      return `<div class="ibt ${s}"><small>${lab}</small><b class="num">${f1v(v)}<span> ${u}</span></b><em>${txt}${R[k] ? ` · ${R[k][0]}–${R[k][1]}` : ""}</em></div>`; };
+    /* scenarios to PBF 24%: weight = FFM ÷ (1 − 0.24); every +1 kg SMM ≈ +FFM/SMM kg FFM */
+    const ratio = r.smm / r.ffm, h2 = r.bmi ? r.w / r.bmi : null, goal = .24;
+    const sc = [0, .8, 1.5].map(a => { const ffm = r.ffm + a / ratio, w = ffm / (1 - goal), fat = w - ffm; return { a, ffm, w, fat, need: r.fat - fat, bmi: h2 ? w / h2 : null }; });
+    const tg = personal().targets || {}, ms = [["p3", "InBody tuần 6", "19/12"], ["p4", "InBody tuần 12", "30/01"], ["s2", "Chặng 2", "~04/2027"]];
+    const seg = r.seg, segC = (kind, k) => { const v = seg && seg[kind][k]; if (!v) return ["—", "#ecdccb"]; const bad = kind === "lean" ? v[1] < 90 : v[1] > 120; return [`${fmt(v[1], 1)}%`, bad ? "#c8302c" : kind === "lean" ? "#1f9a63" : "#e8a317"]; };
+    const segSVG = kind => { const p = k => segC(kind, k), [la, ra, tr, ll, rl] = ["la", "ra", "tr", "ll", "rl"].map(p);
+      const box = (x, y, w, hh, c, t) => `<rect x="${x}" y="${y}" width="${w}" height="${hh}" rx="8" fill="${c[1]}" opacity=".9"/><text x="${x + w / 2}" y="${y + hh / 2 + 4}" text-anchor="middle" font-size="11" font-weight="800" fill="#fff">${c[0]}</text>`;
+      return `<svg viewBox="0 0 170 190" role="img" aria-label="${kind === "lean" ? "Cơ" : "Mỡ"} theo vùng"><circle cx="85" cy="16" r="12" fill="#ecdccb"/>${box(56, 32, 58, 62, tr)}${box(12, 32, 40, 62, ra)}${box(118, 32, 40, 62, la)}${box(44, 98, 39, 76, rl)}${box(87, 98, 39, 76, ll)}
+        <text x="32" y="26" text-anchor="middle" font-size="9" fill="#9a8a7e">phải</text><text x="138" y="26" text-anchor="middle" font-size="9" fill="#9a8a7e">trái</text></svg>`; };
+    const trFat = seg && seg.fat.tr[1], armGap = seg ? seg.lean.la[1] - seg.lean.ra[1] : 0;
+    el.innerHTML = `<section class="card"><div class="ibh1"><div><div class="lbl" style="margin:0">InBody · ${D(r.date)}${r.time ? " · " + r.time : ""}</div><h2>Điểm ${r.score ?? "—"}<span>/100</span></h2></div>
+        <div class="small muted">Cao ${h2 ? fmt(Math.sqrt(h2) * 100) : "—"} cm · BMI ${r.bmi ?? "—"} · FFM ${r.ffm ?? "—"} kg</div></div>
+      <div class="ibtiles">${T.map(tile).join("")}</div>
+      ${(r.notes || []).length ? `<p class="note">${r.notes.map(esc).join(" · ")}</p>` : ""}</section>
+    ${seg ? `<section class="card"><h3>Theo vùng <span class="sub">% so với chuẩn của máy</span></h3><div class="segs"><div><div class="lbl">Cơ (nạc)</div>${segSVG("lean")}</div><div><div class="lbl">Mỡ</div>${segSVG("fat")}</div></div>
+      <p class="small">Đỏ = cần chú ý (cơ dưới 90%, mỡ trên 120%). Mỡ thân <b>${fmt(trFat, 1)}%</b> là chỗ dồn nhiều nhất${armGap > 2 ? `; tay phải yếu hơn tay trái <b>${fmt(armGap, 1)}%</b>` : ""}.</p></section>` : ""}
+    <section class="card"><h3>Muốn PBF về 24% <span class="sub">tính từ số đo này</span></h3>
+      <div class="tscroll"><table class="nt"><tr><th>Nếu SMM tăng</th><th class="n">Cân nặng</th><th class="n">Mỡ phải giảm</th><th class="n">BMI</th></tr>
+        ${sc.map(s => `<tr class="${s.bmi && s.bmi < 18.5 ? "hi" : ""}"><td>${s.a ? "+" + fmt(s.a, 1) + " kg" : "giữ nguyên"}</td><td class="n">${fmt(s.w, 1)} kg</td><td class="n">−${fmt(s.need, 1)} kg</td><td class="n">${s.bmi ? fmt(s.bmi, 1) + (s.bmi < 18.5 ? " ⚠️" : "") : "—"}</td></tr>`).join("")}</table></div>
+      <p class="small">${sc[0].bmi && sc[0].bmi < 18.5 ? `Chỉ giảm mỡ mà không tăng cơ thì phải xuống ${fmt(sc[0].w, 1)} kg, BMI ${fmt(sc[0].bmi, 1)} (dưới 18.5). ` : ""}Càng tăng được cơ thì càng phải giảm ít mỡ, nên lộ trình ưu tiên tập nặng + thâm hụt nhẹ.</p></section>
+    <section class="card"><h3>Mốc trên lộ trình</h3><div class="ibms">${ms.map(([id, lab, d]) => { const t = tg[id] || {}, got = (personal().inbody || {})[id] || {};
+        return `<div><b>${lab}</b><small>${d}</small><span class="num">PBF ${t.pbf ?? "—"}% · SMM ${t.smm ?? "—"} kg${t.fat ? ` · mỡ ${t.fat} kg` : ""}${t.w ? ` · cân ${t.w} kg` : ""}</span>${got.pbf != null ? `<em>đo được: PBF ${got.pbf}% · SMM ${got.smm ?? "—"}</em>` : ""}</div>`; }).join("")}</div>
+      <p class="note">Sửa target ở tab Gantt (bấm vào giai đoạn). Đo lại cùng điều kiện: sáng ~9:30, chưa ăn, chưa tập.</p></section>
+    <section class="card"><h3>App đã chỉnh theo kết quả này</h3><ul class="ibdo">
+      <li><b>Cơ thiếu (${smmPct ? fmt(smmPct) + "% chuẩn" : "SMM thấp"})</b> → tập nặng còn 1–3 rep, app gợi ý lên tạ khi đủ rep; thêm curl + triceps cuối buổi A và C.</li>
+      ${seg && seg.lean.ra[1] < seg.lean.la[1] ? `<li><b>Tay phải yếu hơn</b> → bài một tay (One-arm DB row) làm tay phải trước; nhắc ngay trong thẻ bài ở tab Gym.</li>` : ""}
+      <li><b>Mỡ dồn ở thân${trFat ? ` (${fmt(trFat)}%)` : ""}, eo/hông ${r.whr ?? "—"}</b> → 1,540 kcal + 7,000 bước mỗi ngày; gập bụng không đốt mỡ bụng tại chỗ, carry và chống xoay giữ cho core khỏe.</li>
+      ${r.tbw != null && R.tbw && r.tbw < R.tbw[0] ? `<li><b>Nước dưới chuẩn (${r.tbw} L)</b> → 10 cốc (2.5 L) trên tab Hôm nay.</li>` : ""}
+      ${r.prot != null && R.prot && r.prot < R.prot[0] ? `<li><b>Protein cơ thể dưới chuẩn</b> → protein ≥ 110 g mỗi ngày, đếm trên dải mục tiêu tuần.</li>` : ""}
+      <li><b>Tư thế</b> → kéo nhiều hơn đẩy, có face pull / reverse fly mỗi tuần.</li></ul></section>`;
+  }
   /* every InBody sheet so far (from the personal file or "Chụp tờ InBody") */
   const ibHistory = () => { const L = personal().inbodyLog || []; if (!L.length) return "";
     const d = s => `${s.slice(8)}/${s.slice(5, 7)}/${s.slice(2, 4)}`, c = v => v == null ? "—" : fmt(v, 1);
@@ -12,9 +53,9 @@
   const minD = (a, b) => a < b ? a : b;
 
   VIEWS.plan = el => {
-    const h = location.hash.split("/")[1]; if (["gantt", "week", "month"].includes(h)) sub = h;
-    el.innerHTML = `${vision(true)}<div class="subtabs">${[["gantt", "🗓️ Gantt"], ["week", "📅 Tuần"], ["month", "🗓 Tháng"]].map(([k, t]) => `<a href="#plan/${k}" class="${k === sub ? "on" : ""}">${t}</a>`).join("")}</div><div id="sub"></div>`;
-    ({ gantt, week, month })[sub]($("#sub"));
+    const h = location.hash.split("/")[1]; if (["gantt", "week", "month", "inbody"].includes(h)) sub = h;
+    el.innerHTML = `${vision(true)}<div class="subtabs">${[["gantt", "Gantt"], ["week", "Tuần"], ["month", "Tháng"], ["inbody", "InBody"]].map(([k, t]) => `<a href="#plan/${k}" class="${k === sub ? "on" : ""}">${t}</a>`).join("")}</div><div id="sub"></div>`;
+    ({ gantt, week, month, inbody })[sub]($("#sub"));
   };
   const noPersonal = () => Store.personal() && Store.personal().baseline ? "" : `<div class="note-warn">Chưa có dữ liệu cá nhân (số InBody mốc 0, target). Vào <b>☰ Cài đặt → Nhập file cá nhân</b>, hoặc gõ trực tiếp vào các ô target bên dưới.</div>`;
 
@@ -82,7 +123,7 @@
     <div class="card phase-head"><span class="dot" style="background:${ph.color}"></span><div><h2>${ph.name}</h2><div class="meta">${dm(ph.f)} → ${dm(ph.t)}${ph.weeks ? " · " + ph.weeks : ""} · ${ph.focus}</div></div>
       <span class="chip ${TODAY >= ph.f && TODAY <= ph.t ? "red" : ""}">${TODAY >= ph.f && TODAY <= ph.t ? "📍 Đang ở đây · " : ""}${state}</span>
       <div class="ring"><svg width="62" height="62" viewBox="0 0 62 62" aria-hidden="true"><circle cx="31" cy="31" r="24" fill="none" stroke="#fdf0e0" stroke-width="8"/><circle cx="31" cy="31" r="24" fill="none" stroke="${ph.color}" stroke-width="8" stroke-linecap="round" stroke-dasharray="${C * pct / 100} ${C}" transform="rotate(-90 31 31)"/><text x="31" y="36" text-anchor="middle" font-size="15" font-weight="800" fill="#2b1d14">${pct}%</text></svg><span class="muted small" style="font-weight:600">checklist<br>${done}/${tot} xong</span></div></div>
-    <div class="card"><h3>🎯 Target số đo <span class="sub">sửa ô đỏ được</span></h3>${metricRows(ph)}${ibHistory()}<p class="muted small" style="margin:10px 0 0">Cân TB 7 ngày và eo lấy từ số bạn ghi ở tab Hôm nay. PBF/SMM/Mỡ: gõ kết quả InBody vào ô "Hiện tại", hoặc chụp tờ kết quả để AI đọc giúp.</p>
+    <div class="card"><h3>🎯 Target số đo <span class="sub">sửa ô đỏ được</span></h3>${metricRows(ph)}${(personal().inbodyLog || []).length ? `<a class="lnk ibl" href="#plan/inbody">Xem phân tích InBody ${(personal().inbodyLog.slice(-1)[0].date || "").slice(8)}/${(personal().inbodyLog.slice(-1)[0].date || "").slice(5, 7)} →</a>` : ""}<p class="muted small" style="margin:10px 0 0">Cân TB 7 ngày và eo lấy từ số bạn ghi ở tab Hôm nay. PBF/SMM/Mỡ: gõ kết quả InBody vào ô "Hiện tại", hoặc chụp tờ kết quả để AI đọc giúp.</p>
       <button class="btn ghost" id="ibScan" style="margin-top:10px">📸 Chụp tờ InBody → AI đọc số</button></div>
     <div class="card"><h3>✅ Checklist mục tiêu <span class="sub">tick → 🎉</span></h3>
       <div id="cl">${tot ? ph.checklist.map((c, i) => `<div class="tick ${st.done[i] ? "on" : ""}" data-i="${i}"><span class="box"></span><span class="t">${c}</span></div>`).join("") : `<div class="muted">Chặng 2 sẽ lập chi tiết sau Tết.</div>`}</div>

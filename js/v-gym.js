@@ -68,6 +68,7 @@
           <td><input class="num" inputmode="decimal" data-f="kg" value="${s.kg}" aria-label="kg set ${k + 1}"></td><td><input class="num" inputmode="numeric" data-f="reps" value="${s.reps}" aria-label="${unit.toLowerCase()} set ${k + 1}"></td>
           <td><button class="rirb num" data-a="rir" aria-label="RIR set ${k + 1}: ${s.rir}">${s.rir}</button></td><td><button class="tk" data-a="done" aria-label="Xong set ${k + 1}">✓</button></td></tr>`).join("")}</table>
         ${sg.up ? `<div class="up">↑ ${sg.why}</div>` : ""}
+        ${(P().tips || {})[e.id] ? `<div class="tipx">💡 ${esc(P().tips[e.id])}</div>` : ""}
         <div class="exlinks"><a class="vlink" href="${v.url}" target="_blank" rel="noopener">▶ ${v.label}</a><button class="lnk2" data-a="info">Cách làm · đúng/sai</button></div>
         <div class="exops">${sw ? `<button class="lnk" data-a="swap">⇄ ${MACHINE.has(e.id) ? "Máy bận" : "Có máy trống"}: ${exName(sw)}</button>` : ""}<button class="lnk" data-a="add">+ set</button>${e.sets.length > 1 ? `<button class="lnk" data-a="del">− set</button>` : ""}</div>
       </div>` : ""}</section>`;
