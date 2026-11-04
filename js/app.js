@@ -153,10 +153,13 @@ function dayExport(d) {
   const t = ticksOn(d), miss = CHECKS.filter(c => !t[c[0]]).map(c => c[0] === "move" ? MOVE_LABEL(d) : c[1]);
   const g = Store.gym(iso(d)), rows = workoutRows(d);
   const kcal = Math.round(BREAKFAST_SUM[0] + L.kcal + Dn.kcal), prot = Math.round(BREAKFAST_SUM[1] + L.prot + Dn.prot);
-  const fl = foodList(iso(d)), T = foodTotals(iso(d));
-  const eat = fl.length ? [`Ăn (nhật ký): ${fmt(T.k)} kcal · P ${fmt(T.p)} g · C ${fmt(T.c)} g · F ${fmt(T.f)} g · xơ ${fmt(T.fb)} g`,
-    ...MEALS.map(([k, , t]) => { const it = fl.filter(f => f.m === k); return it.length ? `- ${t}: ${it.map(f => `${f.n}${f.g ? ` ${f.g} g` : ""} (${f.k} kcal${f.src === "photo" || f.src === "text" ? ", AI ước" : ""})`).join("; ")}` : null; }).filter(Boolean)]
-    : [`Ăn theo thực đơn chuẩn: sáng chuẩn; trưa = tối món mặn ${m[1]} ${m[2]}, cơm ${m[5]} g, rau luộc 100 g, canh; trưa 1 ổi; tối ½ táo + sữa chua (ước ~${fmt(kcal)} kcal, ~${prot} g protein nếu ăn đúng). Ghi thêm phần nào ăn khác.`];
+  const dI = iso(d), T = foodTotals(dI), pl = dayPlan(dI), tk = x.ticks || {};
+  const items = o => Object.entries(o).map(([k, q]) => `${shortN(FOODS[k].n)} ${qtyLabel(k, q)}`).join(", ");
+  const extra = mm => extraItems(dI, mm).map(f => `${f.n}${f.g ? ` ${f.g} g` : ""} (${f.k} kcal${f.src === "photo" || f.src === "text" ? ", AI ước" : ""})`);
+  const eat = T.n ? [`Ăn: ${fmt(T.k)} kcal · P ${fmt(T.p)} g · C ${fmt(T.c)} g · F ${fmt(T.f)} g · xơ ${fmt(T.fb)} g`,
+    `- Nồi trưa + tối (${pl.mode === "plan" ? "theo thực đơn" : "tự cân, đồ sống"}): ${items(pl.pot)} → mỗi bữa ½`,
+    ...MEALS.map(([k, , t]) => { const parts = [...(k !== "snack" && tk[k] ? [k === "bf" ? items(pl.bf) : `½ nồi + ${items(pl[k]) || "—"}`] : []), ...extra(k)]; return parts.length ? `- ${t}: ${parts.join("; ")}` : null; }).filter(Boolean)]
+    : [`Ăn theo thực đơn chuẩn (chưa đánh dấu bữa nào): ước ~${fmt(kcal)} kcal, ~${prot} g protein nếu ăn đúng.`];
   return [`📋 Tết Body · ${iso(d)} (${WD[d.getDay()]}) · ${MOVE_LABEL(d)}`,
     `Cân sáng: ${x.w ? x.w + " kg" : "—"}${x.waist ? ` · Eo: ${x.waist} cm` : ""}`,
     ...eat,
@@ -177,15 +180,19 @@ function openSettings() {
     <div class="row2"><button class="btn" id="impP">📥 Nhập file cá nhân / sao lưu</button></div>
     <label class="fld">Tên<input id="sName" value="${esc(p.name || "")}" placeholder="Grace"></label>
     <label class="fld">Câu "vì sao"<input id="sWhy" value="${esc(p.vision || "")}" placeholder="Diện áo dài đón Tết…"></label>
-    <h4>🤖 AI ước tính macro ${Store.geminiKey() ? '<span class="chip green">Gemini: đã có key</span>' : '<span class="chip">mặc định: Claude</span>'}</h4>
-    <p class="muted small">Không cần gì thêm: nút 📸 sẽ gửi ảnh sang app Claude (gói bạn đang dùng), rồi bạn dán kết quả lại. Muốn bấm một lần là ra số thì thêm key <b>Gemini miễn phí</b>:</p>
-    <details class="small keyhow"><summary><b>Cách tạo key không bao giờ bị tính tiền</b></summary><ol>
+    <h4>🤖 AI đọc ảnh (miễn phí) ${Store.geminiKey() || Store.orKey() ? '<span class="chip green">đã có key</span>' : '<span class="chip gold">chưa có key</span>'}</h4>
+    <p class="muted small">Chụp xong ra số luôn. App dùng Gemini trước, hết lượt thì tự chuyển sang OpenRouter. Hai key chỉ lưu trên máy này, không vào file sao lưu.</p>
+    <details class="small keyhow"><summary><b>1. Key Gemini (chính) · không bao giờ bị tính tiền</b></summary><ol>
       <li>Mở <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> → <b>Create API key</b> → chọn <b>tạo trong project mới</b>.</li>
-      <li><b>Đừng</b> dùng project FitTracker hay project nào đã gắn thẻ/billing (Firebase gói Blaze). Project có billing thì Gemini tính tiền.</li>
-      <li>Trong AI Studio, cột <b>Plan</b> của key phải ghi <b>Free</b>. Hết lượt miễn phí thì app chỉ báo lỗi, không trừ tiền.</li>
-      <li>Lưu ý: ở gói miễn phí, Google có thể dùng ảnh gửi lên để cải thiện sản phẩm. Ảnh không muốn chia sẻ thì dùng nút Claude.</li></ol></details>
-    <label class="fld">Key Gemini (chỉ lưu trên máy này, không vào file sao lưu)<input id="gKey" type="password" autocomplete="off" value="${esc(Store.geminiKey())}" placeholder="AIza…"></label>
-    <div class="row2"><button class="btn ghost" id="gSave">💾 Lưu key</button><button class="btn ghost" id="gTest">🧪 Thử key</button>${Store.geminiKey() ? `<button class="btn ghost" id="gDel">Xóa key</button>` : ""}</div>
+      <li><b>Đừng</b> dùng project FitTracker hay project nào đã gắn thẻ (Firebase gói Blaze): project có billing thì Gemini tính tiền.</li>
+      <li>Cột <b>Plan</b> của key phải ghi <b>Free</b>. Hết lượt thì chỉ báo lỗi, không trừ tiền. Ở gói miễn phí, Google có thể dùng ảnh gửi lên để cải thiện sản phẩm.</li></ol></details>
+    <label class="fld">Key Gemini<input id="gKey" type="password" autocomplete="off" value="${esc(Store.geminiKey())}" placeholder="AIza…"></label>
+    <details class="small keyhow"><summary><b>2. Key OpenRouter (dự phòng) · không cần thẻ</b></summary><ol>
+      <li>Mở <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a>, đăng nhập bằng Google → <b>Create Key</b>.</li>
+      <li><b>Đừng nạp tiền.</b> Tài khoản 0 đồng chỉ dùng được mô hình miễn phí (khoảng 50 lượt/ngày), nên không có gì để trừ.</li>
+      <li>App tự chọn mô hình miễn phí đọc được ảnh (hiện có Gemma 4 của Google và Nemotron của NVIDIA).</li></ol></details>
+    <label class="fld">Key OpenRouter<input id="oKey" type="password" autocomplete="off" value="${esc(Store.orKey())}" placeholder="sk-or-…"></label>
+    <div class="row2"><button class="btn ghost" id="gSave">💾 Lưu key</button><button class="btn ghost" id="gTest">🧪 Thử key</button>${Store.geminiKey() || Store.orKey() ? `<button class="btn ghost" id="gDel">Xóa cả 2 key</button>` : ""}</div>
     <h4>🍽️ Lịch sử món ăn <span class="chip">${Store.all.foodHist.length} món</span></h4>
     <p class="muted small">Món đã ăn hiện ra khi gõ tên. Nhập file <b>Export food list.csv</b> của FitTracker để có sẵn món cũ.</p>
     <div class="row2"><button class="btn ghost" id="impCsv">📥 Nhập CSV FitTracker</button></div>
@@ -203,10 +210,10 @@ function openSettings() {
       $("#impP", bg).onclick = () => { const inp = document.createElement("input"); inp.type = "file"; inp.accept = ".json,application/json";
         inp.onchange = () => { const f = inp.files[0]; if (!f) return; f.text().then(t => { try { const k = Store.importJSON(t); close(); FX.celebrate({ emoji: "✅", title: k === "personal" ? "Đã nhập dữ liệu cá nhân" : "Đã khôi phục sao lưu", sub: "" }); drawHeader(); render(); } catch (err) { alert(err.message); } }); };
         inp.click(); };
-      $("#gSave", bg).onclick = () => { const k = $("#gKey", bg).value.trim(); Store.setGeminiKey(k); FX.cheer("🔑", k ? "Đã lưu key Gemini" : "Đã xóa key", "chỉ trên máy này"); };
-      $("#gTest", bg).onclick = async () => { const k = $("#gKey", bg).value.trim(); if (!k) return FX.cheer("⚠️", "Chưa có key", ""); Store.setGeminiKey(k);
-        $("#gTest", bg).textContent = "⏳ Đang thử…"; try { await AI.testKey(); FX.cheer("✅", "Key chạy tốt", "nút ⚡ Gemini đã bật"); } catch (e) { FX.cheer("⚠️", "Key chưa chạy", e.message); } $("#gTest", bg).textContent = "🧪 Thử key"; };
-      const gd = $("#gDel", bg); if (gd) gd.onclick = () => { Store.setGeminiKey(""); close(); openSettings(); };
+      const saveK = () => { Store.setGeminiKey($("#gKey", bg).value.trim()); Store.setOrKey($("#oKey", bg).value.trim()); };
+      $("#gSave", bg).onclick = () => { saveK(); FX.cheer("🔑", "Đã lưu key", "chỉ trên máy này"); };
+      $("#gTest", bg).onclick = async () => { saveK(); $("#gTest", bg).textContent = "⏳ Đang thử…"; const r = await AI.testKeys(); FX.cheer(/⚠️|Chưa/.test(r) ? "⚠️" : "✅", "Kết quả thử key", r); $("#gTest", bg).textContent = "🧪 Thử key"; };
+      const gd = $("#gDel", bg); if (gd) gd.onclick = () => { Store.setGeminiKey(""); Store.setOrKey(""); close(); openSettings(); };
       $("#impCsv", bg).onclick = () => { const inp = document.createElement("input"); inp.type = "file"; inp.accept = ".csv,text/csv";
         inp.onchange = () => { const f = inp.files[0]; if (!f) return; f.text().then(t => { try { const n = Store.importFoods(fitTrackerCSV(t)); close(); FX.celebrate({ emoji: "🍽️", title: `Đã nhập ${n} món`, sub: "gõ tên là thấy" }); } catch (err) { alert(err.message); } }); };
         inp.click(); };
@@ -247,10 +254,42 @@ function fitTrackerCSV(text) {
 const VIEWS = {};
 const currentView = () => { const v = (location.hash || "#today").slice(1).split("/")[0]; return VIEWS[v] ? v : "today"; };
 function render() {
-  const v = currentView(); markNav(); const el = $("#view"); el.innerHTML = ""; el.className = "wrap v-" + v; VIEWS[v](el);
-  const b = AI.banner(); if (b) el.insertAdjacentHTML("afterbegin", b);
+  const v = currentView(); markNav(); const el = $("#view"); el.innerHTML = ""; el.onclick = null; el.className = "wrap v-" + v; VIEWS[v](el);
+  AI.banner(); el.insertAdjacentHTML("afterbegin", goalStrip());
   window.scrollTo(0, 0);
 }
+/* ---------- goal strip: this week / this month, always on top (auto-filled, editable) ---------- */
+function weekStart(d) { return addD(d, -((d.getDay() + 6) % 7)); }
+function goalData() {
+  const a = weekStart(TODAY), G = Store.all.settings.goals || {}, wk = "w" + iso(a), mk = "m" + TISO.slice(0, 7);
+  let pDays = 0, gym = 0, past = 0;
+  for (let i = 0; i < 7; i++) { const d = addD(a, i); if (d > TODAY) break; past++; if (foodTotals(iso(d)).p >= MACRO_T.p.lo) pDays++; const g = Store.gym(iso(d)); if (g && g.finished) gym++; }
+  const gymOf = Object.values(WEEK_PLAN).filter(p => p.k === "gym").length, mEnd = new Date(TODAY.getFullYear(), TODAY.getMonth() + 1, 0);
+  const ph = phaseAt(mEnd) || phaseAt(TODAY), tw = ph && ((P().targets || {})[ph.id] || {}).w, now = avg7(TODAY);
+  return { wk, mk, week: challengeWeek >= 1 ? `Tuần ${challengeWeek}` : "Tuần 0", month: `Th. ${TODAY.getMonth() + 1}`,
+    a: (G[wk] || {}).a || `Protein ≥ ${MACRO_T.p.lo} g mỗi ngày`, aN: pDays, aOf: 7,
+    b: (G[wk] || {}).b || `Đủ ${gymOf} buổi gym`, bN: gym, bOf: gymOf,
+    m: (G[mk] || {}).m || (tw ? `Cân TB ≤ ${fmt(tw, 1)} kg` : ph ? ph.focus : "Giữ nhịp tập và ăn"),
+    mNow: tw && now ? (now <= tw ? `${fmt(now, 1)} · đạt ✓` : `${fmt(now, 1)} · còn ${fmt(now - tw, 1)} kg`) : tw ? "chưa có cân" : "" };
+}
+function goalStrip() {
+  const g = goalData(), dots = (n, of) => `<span class="dots">${Array.from({ length: of }, (_, i) => `<i class="${i < n ? "on" : ""}"></i>`).join("")}</span>`;
+  return `<button class="goal" id="goalStrip" aria-label="Mục tiêu tuần và tháng, bấm để sửa">
+    <div class="row"><span class="tag">${g.week}</span><span class="txt">${esc(g.a)}</span><span class="prog num">${dots(g.aN, g.aOf)} ${g.aN}/${g.aOf}</span></div>
+    <div class="row"><span class="tag"></span><span class="txt">${esc(g.b)}</span><span class="prog num">${dots(g.bN, g.bOf)} ${g.bN}/${g.bOf}</span></div>
+    <div class="row"><span class="tag">${g.month}</span><span class="txt">${esc(g.m)}</span><span class="prog num small">${esc(g.mNow)}</span></div></button>`;
+}
+document.addEventListener("click", e => {
+  if (!e.target.closest("#goalStrip")) return;
+  const g = goalData();
+  sheet("Mục tiêu tuần này · tháng này", `<p class="small" style="margin-top:0">App tự điền từ lộ trình và số cân. Sửa câu chữ nếu muốn; số tiến độ vẫn tự đếm.</p>
+    <label class="fld">${g.week} · việc 1<input id="gA" value="${esc(g.a)}"></label><label class="fld">${g.week} · việc 2<input id="gB" value="${esc(g.b)}"></label><label class="fld">${g.month}<input id="gM" value="${esc(g.m)}"></label>
+    <div class="row2"><button class="btn" id="gSave" style="flex:1">Lưu</button><button class="btn ghost" id="gAuto">Tự điền lại</button></div>`, (bg, close) => {
+    const G = Store.all.settings.goals = Store.all.settings.goals || {};
+    $("#gSave", bg).onclick = () => { G[g.wk] = { a: $("#gA", bg).value.trim(), b: $("#gB", bg).value.trim() }; G[g.mk] = { m: $("#gM", bg).value.trim() }; Store.save(); close(); render(); };
+    $("#gAuto", bg).onclick = () => { delete G[g.wk]; delete G[g.mk]; Store.save(); close(); render(); };
+  });
+});
 addEventListener("hashchange", render);
 addEventListener("DOMContentLoaded", () => {
   drawHeader(); render();

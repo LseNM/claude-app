@@ -1,82 +1,58 @@
 "use strict";
-/* Today: hero + CTA, weight/waist, checklist + water, today's menu (one món mặn for lunch and dinner), schedule, export. */
+/* Hôm nay (v2): one screen — today's session, 3 tiles (cân · checklist · ăn), 8 tick chips + water, meal icons. Schedule and export behind small links. */
 VIEWS.today = el => {
-  const plan = WEEK_PLAN[TODAY.getDay()], ph = phaseAt(TODAY), d = Store.day(TISO), isReal = !QS.get("date");
-  const nowH = new Date().getHours() + new Date().getMinutes() / 60;
-  const w7 = avg7(TODAY), w7p = avg7(addD(TODAY, -7));
-  const kind = plan.k === "gym" ? "gym" : plan.k;
-  const sched = kind === "yoga" ? [DAY_COMMON.morning[0], DAY_COMMON.morning[1], ...DAY_MID.yoga, ...DAY_COMMON.evening]
-    : kind === "rest" ? [...DAY_COMMON.morning.slice(0, 3), ...DAY_MID.rest, ...DAY_COMMON.evening] : [...DAY_COMMON.morning, ...DAY_MID[kind], ...DAY_COMMON.evening];
-  const toH = t => { const [h, m] = t.split(":").map(Number); return h + m / 60; };
-  const nowIdx = isReal ? sched.reduce((a, s, i) => toH(s[0]) <= nowH ? i : a, -1) : -1;
-  const g = Store.gym(TISO);
-  el.innerHTML = `${vision()}
-  <div class="tgrid">
-    <section class="card hero">
-      <div class="kick">${WDN[TODAY.getDay()]}, ${dm(TODAY)}${ph ? ` · ${ph.name}` : ""}</div>
-      <h2>${plan.e} ${MOVE_LABEL(TODAY)}</h2>
-      <p class="muted" style="margin:4px 0 12px">${plan.k === "gym" ? `18:30 · ${programFor(TODAY, plan.t).length} bài · ${g && g.finished ? "✅ đã xong" : g ? "đang tập dở" : "chưa tập"}` : { zone2: "Zone 2 40–45 phút, nhịp tim 125–140", walk: "Đi bộ nhanh 45 phút", yoga: "Yoga 60 phút buổi sáng", rest: "Nghỉ hẳn · đi chợ · nấu sẵn · review tuần" }[plan.k]}</p>
-      ${plan.k === "gym" ? `<a class="btn big" href="#gym">${g ? "Tiếp tục tập →" : "Bắt đầu tập →"}</a>` : `<a class="btn ghost" href="#gym">Xem buổi tập kế tiếp</a>`}
-    </section>
-    <section class="card">
-      <h3>⚖️ Số đo sáng nay</h3>
-      <div class="meas">
-        <label>Cân (kg)<input id="inW" inputmode="decimal" placeholder="vd 54.2" value="${d.w || ""}"></label>
-        <label>Vòng eo (cm)${TODAY.getDay() === 1 ? ' <span class="chip gold">thứ Hai</span>' : ""}<input id="inWaist" inputmode="decimal" placeholder="${TODAY.getDay() === 1 ? "đo ngang rốn" : "chỉ cần thứ Hai"}" value="${d.waist || ""}"></label>
+  const plan = WEEK_PLAN[TODAY.getDay()], d = Store.day(TISO), g = Store.gym(TISO), w7 = avg7(TODAY);
+  const CK = { weigh: ["⚖️", "Cân"], water: ["💧", "2.5 L"], steps: ["👟", "7k bước"], bf: ["☀️", "Sáng"], lunch: ["🌤️", "Trưa"], move: [plan.e, plan.t.replace(" · chợ · review", "")], dinner: ["🌙", "Tối"], sleep: ["😴", "22:30"] };
+  const sub = plan.k === "gym" ? `18:30 · ${programFor(TODAY, plan.t).length} bài · ${g && g.finished ? "đã xong ✓" : g ? "đang tập dở" : "chưa tập"}` : { zone2: "Zone 2 · 40–45 phút · nhịp tim 125–140", walk: "Đi bộ nhanh 45 phút", yoga: "Yoga 60 phút buổi sáng", rest: "Nghỉ · đi chợ · nấu sẵn · review tuần" }[plan.k];
+  const draw = () => {
+    const t = ticksOn(TODAY), on = Object.values(t).filter(Boolean).length, E = dayEaten(TISO), p = dayPlan(TISO);
+    const ms = (m, lab) => { const icons = m === "bf" ? Object.keys(p.bf).map(k => FOODS[k].e) : [...Object.keys(p.pot).filter(k => k !== "giavi").map(k => FOODS[k].e), ...Object.keys(p[m]).map(k => FOODS[k].e)];
+      const ex = extraItems(TISO, m).map(f => f.e || foodEmoji(f.n)); return `<a class="ms ${t[m] ? "on" : ""}" href="#food/log"><span class="n">${lab}</span><span class="ic">${[...icons, ...ex].join("")}</span><span class="k num">${t[m] ? "✓" : fmt(mealVal(p, m)[0])}</span></a>`; };
+    el.innerHTML = `<div class="screen">
+      <section class="card hero2"><div class="t"><small>${WDN[TODAY.getDay()][0].toUpperCase() + WDN[TODAY.getDay()].slice(1)} ${dm(TODAY)}</small><b>${MOVE_LABEL(TODAY)}</b><small>${sub}</small></div>
+        ${plan.k === "gym" ? `<a class="btn" href="#gym">${g && g.finished ? "Xem" : g ? "Tiếp tục" : "Bắt đầu"}</a>` : ""}</section>
+      <div class="tiles3">
+        <button class="tile" id="wTile"><span class="lbl">Cân sáng</span><b class="num">${d.w ? fmt(d.w, 1) : "—"} <small>kg</small></b><span class="small num">${w7 ? "TB 7 ngày " + fmt(w7, 1) : "bấm để ghi"}</span></button>
+        <div class="tile"><span class="lbl">Checklist</span><b class="num">${on}<small>/8</small></b><span class="small">${on === 8 ? "hoàn hảo 🎆" : on >= 5 ? "đã giữ lửa 🔥" : `thêm ${5 - on} việc`}</span></div>
+        <a class="tile" href="#food/log"><span class="lbl">Đã ăn</span><b class="num">${fmt(E[0])}</b><span class="small num">P ${fmt(E[1])} g</span></a>
       </div>
-      <div class="small muted" style="margin-top:8px">${w7 ? `TB 7 ngày: <b style="color:var(--ink)">${fmt(w7, 1)} kg</b>${w7p ? ` · ${w7 <= w7p ? "▼" : "▲"} ${fmt(Math.abs(w7p - w7), 1)} so với 7 ngày trước` : ""}` : "Cân sau khi đi vệ sinh, trước khi ăn. App tự tính trung bình 7 ngày."}</div>
-    </section>
-    <section class="card" id="chk"></section>
-    <section class="card" id="mnu"></section>
-    <section class="card sched"><h3>🕐 Lịch hôm nay <span class="sub">một ngày chuẩn</span></h3>
-      ${sched.map((s, i) => `<div class="sl ${i === nowIdx ? "now" : i < nowIdx ? "past" : ""} k-${s[1]}"><b>${s[0]}</b><span>${s[2]}</span></div>`).join("")}</section>
-    <section class="card expc"><h3>📋 Tổng kết cho Claude Project</h3><p class="small muted">Tối nay copy khối này dán vào Claude Project (thay cho việc gõ lại từng thứ).</p>
-      <button class="btn" id="expDay" style="width:100%">📋 Xuất tổng kết hôm nay</button></section>
-  </div>`;
-  drawChecks(); drawMenu();
-  const num = v => { const n = parseFloat(String(v).replace(",", ".")); return isNaN(n) ? null : n; };
-  $("#inW").onchange = e => { const v = num(e.target.value); d.w = v; if (v) d.ticks.weigh = 1; Store.save(); FX.cheer("⚖️", "Đã ghi cân", v ? v + " kg" : ""); render(); };
-  $("#inWaist").onchange = e => { d.waist = num(e.target.value); Store.save(); FX.cheer("📏", "Đã ghi vòng eo", d.waist ? d.waist + " cm" : ""); render(); };
-  $("#expDay").onclick = () => exportSheet(`📋 Tổng kết ${dm(TODAY)}`, dayExport(TODAY));
-
-  function drawChecks() {
-    const t = ticksOn(TODAY), on = Object.values(t).filter(Boolean).length, n = CHECKS.length, C = 2 * Math.PI * 30, pct = on / n;
-    $("#chk").innerHTML = `<div class="ring-hd"><svg width="78" height="78" viewBox="0 0 78 78" aria-hidden="true"><circle cx="39" cy="39" r="30" fill="none" stroke="#fdf0e0" stroke-width="10"/><circle cx="39" cy="39" r="30" fill="none" stroke="${pct === 1 ? "#1f9a63" : "#e8a317"}" stroke-width="10" stroke-linecap="round" stroke-dasharray="${C * pct} ${C}" transform="rotate(-90 39 39)"/><text x="39" y="45" text-anchor="middle" font-size="18" font-weight="800" fill="#2b1d14">${on}/${n}</text></svg>
-      <div><h3>✅ Checklist hôm nay</h3><div class="muted small" style="font-weight:600">${pct === 1 ? "Hoàn hảo! 🎆" : pct >= KEEP ? "Đã giữ lửa 🔥 hôm nay" : `Thêm ${Math.ceil(KEEP * n) - on} việc để giữ lửa 🔥`}</div></div></div>
-      ${CHECKS.map(([k, label, m]) => `<div class="tick ${t[k] ? "on" : ""}" data-k="${k}"><span class="box"></span><span class="t">${k === "move" ? MOVE_LABEL(TODAY) : label}</span><span class="meta">${m}</span></div>${k === "water" ? `<div class="cups" id="cups"></div>` : ""}`).join("")}`;
-    const w = d.water || 0;
-    $("#cups").innerHTML = Array.from({ length: 10 }, (_, i) => `<button data-c="${i}" aria-label="Cốc ${i + 1} (${(i + 1) * 250} ml)"><svg viewBox="0 0 34 40"><path d="M5 4 H29 L26 37 H8 Z" fill="${i < w ? "#cfe6fb" : "#fff"}" stroke="${i < w ? "#2a78d6" : "#e6d5bf"}" stroke-width="2.5" stroke-linejoin="round"/>${i < w ? `<path d="M7 14 H27 L25.5 35 H8.5 Z" fill="#2a78d6" opacity=".55"/>` : ""}</svg></button>`).join("") +
-      `<span class="wl">${fmt(w * .25, 2).replace(/\.?0+$/, "")} / 2.5 L</span>`;
-  }
-  $("#chk").onclick = e => {
-    const c = e.target.closest("[data-c]");
-    if (c) { const i = +c.dataset.c, was = d.water || 0; d.water = i + 1 === was ? i : i + 1; const full = d.water >= 10; if (full && !d.ticks.water) FX.celebrate({ emoji: "💧", title: "Đủ 2.5 L!", sub: "+10 XP" }); d.ticks.water = full ? 1 : 0; Store.save(); drawChecks(); refreshHeader(); return; }
-    const r = e.target.closest(".tick"); if (!r) return;
-    const k = r.dataset.k;
-    if (k === "move" && plan.k === "gym" && g && g.finished) { FX.cheer("🏋️", "Buổi tập đã xong", "tick tự động từ tab Gym"); return; }
-    const before = Object.values(ticksOn(TODAY)).filter(Boolean).length;
-    d.ticks[k] = d.ticks[k] ? 0 : 1; Store.save(); syncPlanFromTick(TISO, k, !!d.ticks[k]); drawMenu();
-    const after = Object.values(ticksOn(TODAY)).filter(Boolean).length;
-    if (d.ticks[k]) {
-      if (after === CHECKS.length) FX.celebrate({ big: true, emoji: "🎆", title: "Ngày hoàn hảo!", sub: `🔥 ${streak()} ngày giữ lửa · +80 XP` });
-      else if (before < KEEP * CHECKS.length && after >= KEEP * CHECKS.length) FX.celebrate({ emoji: "🔥", title: "Đã giữ lửa hôm nay!", sub: `${streak()} ngày liên tiếp` });
-      else FX.celebrate({ xp: 10 });
-    }
-    drawChecks(); refreshHeader();
+      <section class="card"><div class="checks" id="cks">${CHECKS.map(([k]) => `<button class="ck ${t[k] ? "on" : ""}" data-k="${k}" aria-pressed="${!!t[k]}"><span>${CK[k][0]}</span>${esc(CK[k][1])}</button>`).join("")}</div>
+        <div class="cups" id="cups">${Array.from({ length: 10 }, (_, i) => `<button data-c="${i}" aria-label="Cốc ${i + 1} (${(i + 1) * 250} ml)"><svg viewBox="0 0 24 28"><path d="M3 3h18l-2 22H5z" fill="${i < d.water ? "#cfe6fb" : "#fff"}" stroke="${i < d.water ? "#2a78d6" : "#e6d5bf"}" stroke-width="2" stroke-linejoin="round"/></svg></button>`).join("")}<span class="wl num">${fmt((d.water || 0) * .25, 2).replace(/\.?0+$/, "") || 0} / 2.5 L</span></div></section>
+      <section class="card"><div class="h"><b>Bữa hôm nay</b><span>${fmt(dayPlanned(TISO)[0])} kcal theo kế hoạch</span></div><div class="mealstrip">${ms("bf", "Sáng")}${ms("lunch", "Trưa")}${ms("dinner", "Tối")}</div></section>
+      <div class="minil"><button id="sched">Lịch một ngày chuẩn</button><button id="expDay">Xuất cho Claude Project</button></div></div>`;
   };
-  function drawMenu() {
-    const mi = d.main || 0, mm = MAINS[mi], L = meal("lunch", mi), Dn = meal("dinner", mi);
-    const K = BREAKFAST_SUM[0] + L.kcal + Dn.kcal, Pr = BREAKFAST_SUM[1] + L.prot + Dn.prot, F = BREAKFAST_SUM[2] + L.fib + Dn.fib;
-    const m = (lab, v, t, max, col, unit) => `<div><div class="l"><span>${lab}</span><span>${fmt(v)} / ${fmt(t)} ${unit}</span></div><div class="meter"><i style="width:${Math.min(100, v / max * 100)}%;background:${col}"></i><s style="left:${t / max * 100}%"></s></div></div>`;
-    $("#mnu").innerHTML = `<h3>🍽️ Thực đơn hôm nay <a class="sub" href="#food">chi tiết →</a></h3>
-      <div class="meal"><div class="mh2"><b>☀️ Sáng chuẩn</b><span class="k">${Math.round(BREAKFAST_SUM[0])} kcal · ${Math.round(BREAKFAST_SUM[1])} g</span></div><div class="items">Sinh tố (½ whey, 200 ml sữa đậu nành, ½ chuối, chia, 20 g yến mạch) + 2 trứng luộc</div></div>
-      <div class="meal"><div class="mh2"><b>🍖 Món mặn</b><span class="chip gold">trưa = tối</span></div>
-        <select id="mainSel" aria-label="Món mặn cho cả trưa và tối">${MAINS.map((x, i) => `<option value="${i}" ${i === mi ? "selected" : ""}>${x[0]} ${x[1]} ${x[2]} · cơm ${x[5]} g</option>`).join("")}</select>
-        <div class="items">Mỗi bữa: cơm <b>${mm[5]} g</b> + ${mm[1].toLowerCase()} ${mm[2]} (~22 g đạm) + rau luộc 100 g + 1 chén canh củ thịt bằm${mm[6] >= 10 ? `<br><b style="color:var(--c2)">⚠️ ${mm[6]} g fat/phần: chỉ 1 bữa/ngày${mm[6] >= 14 ? ", 1–2 lần/tuần" : ""}</b>` : ""}</div></div>
-      <div class="meal two"><div><b>🌤️ Trưa</b> <span class="k">${L.kcal} kcal · ${Math.round(L.prot)} g</span><div class="items">+ 🍈 1 trái ổi</div></div><div><b>🌙 Tối</b> <span class="k">${Dn.kcal} kcal · ${Math.round(Dn.prot)} g</span><div class="items">+ 🍎 ½ táo · 🥣 sữa chua Vinamilk</div></div></div>
-      ${(() => { const T = foodTotals(TISO); return T.n
-        ? `<div class="eaten"><div class="eh"><b>📝 Đã ghi hôm nay</b><a href="#food/log">nhật ký →</a></div><div class="tot">${m("Calo", T.k, 1540, 1900, T.k > 1640 ? "#eb6834" : "#1f9a63", "kcal")}${m("Protein", T.p, 118, 140, "#2a78d6", "g")}</div></div>`
-        : `<div class="eaten none"><span>Kế hoạch nếu ăn đúng: ~${fmt(K)} kcal · ~${fmt(Pr)} g protein · ${fmt(F)} g xơ</span><a class="btn ghost" href="#food/log">📸 Ghi món ăn</a></div>`; })()}`;
-    $("#mainSel").onchange = e => { d.main = +e.target.value; Store.save(); refreshPlanMains(TISO); drawMenu(); FX.cheer(MAINS[d.main][0], "Đã đổi món mặn", `cơm ${MAINS[d.main][5]} g mỗi bữa để vẫn ~540 kcal`); };
+  draw();
+  el.onclick = e => {
+    const c = e.target.closest("[data-c]");
+    if (c) { const i = +c.dataset.c, full0 = d.water >= 10; d.water = i + 1 === d.water ? i : i + 1; d.ticks.water = d.water >= 10 ? 1 : 0; Store.save(); if (!full0 && d.water >= 10) FX.celebrate({ emoji: "💧", title: "Đủ 2.5 L!", sub: "+10 XP" }); draw(); refreshHeader(); return; }
+    const r = e.target.closest(".ck");
+    if (r) { const k = r.dataset.k;
+      if (k === "move" && plan.k === "gym" && g && g.finished) { FX.cheer("🏋️", "Buổi tập đã xong", "tick tự động từ tab Gym"); return; }
+      const before = Object.values(ticksOn(TODAY)).filter(Boolean).length; if (["bf", "lunch", "dinner"].includes(k)) dayPlan(TISO, true);
+      d.ticks[k] = d.ticks[k] ? 0 : 1; Store.save(); const after = Object.values(ticksOn(TODAY)).filter(Boolean).length;
+      if (d.ticks[k]) { if (after === CHECKS.length) FX.celebrate({ big: true, emoji: "🎆", title: "Ngày hoàn hảo!", sub: `🔥 ${streak()} ngày giữ lửa · +80 XP` });
+        else if (before < KEEP * CHECKS.length && after >= KEEP * CHECKS.length) FX.celebrate({ emoji: "🔥", title: "Đã giữ lửa hôm nay!", sub: `${streak()} ngày liên tiếp` }); else FX.celebrate({ xp: 10 }); }
+      draw(); refreshHeader(); return; }
+    if (e.target.closest("#wTile")) weightSheet();
+    if (e.target.closest("#expDay")) exportSheet(`Tổng kết ${dm(TODAY)}`, dayExport(TODAY));
+    if (e.target.closest("#sched")) schedSheet();
+  };
+  function weightSheet() {
+    const mon = TODAY.getDay() === 1;
+    sheet("Cân sáng nay", `<div class="stepper"><button data-s="-0.1" aria-label="Bớt 0.1">−</button><input id="wIn" class="num" inputmode="decimal" value="${d.w || (w7 ? fmt(w7, 1) : "")}" aria-label="kg"><span class="u">kg</span><button data-s="0.1" aria-label="Thêm 0.1">＋</button></div>
+      <p class="note">Cân sau khi đi vệ sinh, trước khi ăn. App tự tính trung bình 7 ngày.</p>
+      ${mon ? `<label class="fld">Vòng eo ngang rốn (thứ Hai)<input id="waIn" inputmode="decimal" value="${d.waist || ""}" placeholder="cm"></label>` : ""}
+      <button class="btn wide" id="wOk">Lưu</button>`, (bg, close) => {
+      const num = v => { const n = parseFloat(String(v).replace(",", ".")); return isNaN(n) ? null : n; };
+      bg.addEventListener("click", e => { const s = e.target.closest("[data-s]"); if (s) $("#wIn", bg).value = ((num($("#wIn", bg).value) || 54) + +s.dataset.s).toFixed(1); });
+      $("#wOk", bg).onclick = () => { const v = num($("#wIn", bg).value); d.w = v; if (v) d.ticks.weigh = 1; const wa = $("#waIn", bg); if (wa) d.waist = num(wa.value); Store.save(); close(); FX.cheer("⚖️", "Đã ghi cân", v ? v + " kg" : ""); draw(); refreshHeader(); };
+    });
+  }
+  function schedSheet() {
+    const kind = plan.k, sched = kind === "yoga" ? [DAY_COMMON.morning[0], DAY_COMMON.morning[1], ...DAY_MID.yoga, ...DAY_COMMON.evening]
+      : kind === "rest" ? [...DAY_COMMON.morning.slice(0, 3), ...DAY_MID.rest, ...DAY_COMMON.evening] : [...DAY_COMMON.morning, ...DAY_MID[kind], ...DAY_COMMON.evening];
+    const toH = s => { const [h, m] = s.split(":").map(Number); return h + m / 60; }, nowH = new Date().getHours() + new Date().getMinutes() / 60, isReal = !QS.get("date");
+    const ni = isReal ? sched.reduce((a, s, i) => toH(s[0]) <= nowH ? i : a, -1) : -1;
+    sheet("Lịch một ngày chuẩn", `<div class="sched">${sched.map((s, i) => `<div class="sl ${i === ni ? "now" : i < ni ? "past" : ""} k-${s[1]}"><b>${s[0]}</b><span>${s[2]}</span></div>`).join("")}</div>`);
   }
 };

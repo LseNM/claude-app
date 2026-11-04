@@ -4,6 +4,11 @@
   let sub = "gantt", sel = (phaseAt(TODAY) || PHASES[0]).id, zoom = "tet", weekOff = 0, monthOff = 0;
   const personal = () => { const p = Store.personal() || { kind: "tet-body-personal" }; p.targets = p.targets || {}; p.rewards = p.rewards || {}; p.strength = p.strength || {}; p.inbody = p.inbody || {}; return p; };
   const savePersonal = p => Store.setPersonal(p);
+  /* every InBody sheet so far (from the personal file or "Chụp tờ InBody") */
+  const ibHistory = () => { const L = personal().inbodyLog || []; if (!L.length) return "";
+    const d = s => `${s.slice(8)}/${s.slice(5, 7)}/${s.slice(2, 4)}`, c = v => v == null ? "—" : fmt(v, 1);
+    return `<div class="ibh"><div class="lbl">Lịch sử InBody</div><div class="tscroll"><table class="nt"><tr><th>Ngày</th><th class="n">Cân</th><th class="n">PBF %</th><th class="n">SMM</th><th class="n">Mỡ kg</th><th class="n">Điểm</th></tr>
+      ${L.map(x => `<tr><td>${d(x.date)}</td><td class="n">${c(x.w)}</td><td class="n">${c(x.pbf)}</td><td class="n">${c(x.smm)}</td><td class="n">${c(x.fat)}</td><td class="n">${x.score ?? "—"}</td></tr>`).join("")}</table></div></div>`; };
   const minD = (a, b) => a < b ? a : b;
 
   VIEWS.plan = el => {
@@ -77,7 +82,7 @@
     <div class="card phase-head"><span class="dot" style="background:${ph.color}"></span><div><h2>${ph.name}</h2><div class="meta">${dm(ph.f)} → ${dm(ph.t)}${ph.weeks ? " · " + ph.weeks : ""} · ${ph.focus}</div></div>
       <span class="chip ${TODAY >= ph.f && TODAY <= ph.t ? "red" : ""}">${TODAY >= ph.f && TODAY <= ph.t ? "📍 Đang ở đây · " : ""}${state}</span>
       <div class="ring"><svg width="62" height="62" viewBox="0 0 62 62" aria-hidden="true"><circle cx="31" cy="31" r="24" fill="none" stroke="#fdf0e0" stroke-width="8"/><circle cx="31" cy="31" r="24" fill="none" stroke="${ph.color}" stroke-width="8" stroke-linecap="round" stroke-dasharray="${C * pct / 100} ${C}" transform="rotate(-90 31 31)"/><text x="31" y="36" text-anchor="middle" font-size="15" font-weight="800" fill="#2b1d14">${pct}%</text></svg><span class="muted small" style="font-weight:600">checklist<br>${done}/${tot} xong</span></div></div>
-    <div class="card"><h3>🎯 Target số đo <span class="sub">sửa ô đỏ được</span></h3>${metricRows(ph)}<p class="muted small" style="margin:10px 0 0">Cân TB 7 ngày và eo lấy từ số bạn ghi ở tab Hôm nay. PBF/SMM/Mỡ: gõ kết quả InBody vào ô "Hiện tại", hoặc chụp tờ kết quả để AI đọc giúp.</p>
+    <div class="card"><h3>🎯 Target số đo <span class="sub">sửa ô đỏ được</span></h3>${metricRows(ph)}${ibHistory()}<p class="muted small" style="margin:10px 0 0">Cân TB 7 ngày và eo lấy từ số bạn ghi ở tab Hôm nay. PBF/SMM/Mỡ: gõ kết quả InBody vào ô "Hiện tại", hoặc chụp tờ kết quả để AI đọc giúp.</p>
       <button class="btn ghost" id="ibScan" style="margin-top:10px">📸 Chụp tờ InBody → AI đọc số</button></div>
     <div class="card"><h3>✅ Checklist mục tiêu <span class="sub">tick → 🎉</span></h3>
       <div id="cl">${tot ? ph.checklist.map((c, i) => `<div class="tick ${st.done[i] ? "on" : ""}" data-i="${i}"><span class="box"></span><span class="t">${c}</span></div>`).join("") : `<div class="muted">Chặng 2 sẽ lập chi tiết sau Tết.</div>`}</div>

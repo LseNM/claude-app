@@ -37,7 +37,7 @@ const FOOD_MENU = el => {
   const inSess = id => ["free", "machine"].flatMap(m => Object.entries(PROGRAM[m]).filter(([, l]) => l.some(x => x.id === id)).map(([s]) => [s, m === "free" ? "tới 30/11" : "từ 01/12"]));
   const ITEMS = [
     ...Object.entries(EX).map(([id, e]) => ({ kind: "ex", id, name: e.name, vi: e.vi, cat: e.tag })),
-    ...Object.entries(SIMPLE_EX).map(([id, e]) => ({ kind: "ex", id, name: e.name, vi: e.vi, cat: "extra", emo: e.e })),
+    ...Object.entries(SIMPLE_EX).filter(([id]) => !EX[id]).map(([id, e]) => ({ kind: "ex", id, name: e.name, vi: e.vi, cat: "extra", emo: e.e })),
     ...BREAKFAST.map(b => ({ kind: "food", cat: "bf", emo: b[0], name: b[1], amt: b[2], k: b[3], p: b[4], f: b[5] })),
     ...MAINS.map(m => ({ kind: "food", cat: "prot", emo: m[0], name: m[1], amt: `${m[2]} chín (~${m[3]} sống)`, k: m[4], p: 22, f: 0, fat: m[6], rice: m[5] })),
     { kind: "food", cat: "plate", emo: "🍚", name: "Cơm trắng", amt: "130 g · mốc khi ăn thịt heo nạc", k: 169, p: 3.5, f: .5 },

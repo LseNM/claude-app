@@ -35,6 +35,8 @@ const Store = (() => {
     importFoods(list) { let n = 0; (list || []).forEach(f => { if (f && f.n) { remember(f, f.count || 1); n++; } }); save(); return n; },
     geminiKey() { try { return localStorage.getItem(GKEY) || ""; } catch (e) { return ""; } },
     setGeminiKey(k) { try { k ? localStorage.setItem(GKEY, k) : localStorage.removeItem(GKEY); } catch (e) { } },
+    orKey() { try { return localStorage.getItem("tetbody.openrouter") || ""; } catch (e) { return ""; } },
+    setOrKey(k) { try { k ? localStorage.setItem("tetbody.openrouter", k) : localStorage.removeItem("tetbody.openrouter"); } catch (e) { } },
     exportJSON: () => JSON.stringify({ app: "tet-body", version: APP_VERSION, exported: new Date().toISOString(), data: S }, null, 1),
     importJSON(text) {
       const j = JSON.parse(text);

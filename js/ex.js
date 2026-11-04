@@ -84,19 +84,33 @@ const disc = (p, c, r = 8) => `<circle cx="${f1(p[0])}" cy="${f1(p[1])}" r="${r}
 const txt = (x, y, s, anchor = "start") => `<text x="${x}" y="${y}" font-size="11" fill="#898781" text-anchor="${anchor}">${s}</text>`;
 const ground = ln([0, 181], [220, 181], "#dcd9cf", 2);
 
+/* v2: a woman athlete instead of a stick figure (same joints): skin limbs, red sports top + shorts, hair bun, shoes. Far side drawn a shade darker. */
+const SKIN = "#f1c3a1", SKIN2 = "#d9a582", TOP = "#c8302c", SHORTS = "#9e2420", SHORTS2 = "#7e1a17", SHOE = "#3a2a22", HAIR = "#3b2418";
+const mix = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
 function figure(J, P) {
-  const limb = (l, c) => ln(l.root, l.k, c, 7) + ln(l.k, l.a, c, 7) + ln(l.a, l.toe, c, 5);
-  const farC = P.front ? NEAR : FAR;
+  const far = !P.front;
+  const leg = (l, near) => { const sk = near ? SKIN : SKIN2, sh = near ? SHORTS : SHORTS2;
+    return ln(l.root, l.k, sk, 13) + ln(l.root, mix(l.root, l.k, .42), sh, 14.5) + ln(l.k, l.a, sk, 9.5) + ln(l.a, l.toe, SHOE, 7) + ln(mix(l.a, l.toe, -.15), l.a, SHOE, 8); };
+  const arm = (a, near) => { const sk = near ? SKIN : SKIN2; return ln(a.root, a.e, sk, 8.5) + ln(a.e, a.h, sk, 7.5) + `<circle cx="${f1(a.h[0])}" cy="${f1(a.h[1])}" r="4.3" fill="${sk}"/>`; };
   let s = "";
-  if (J.leg2) s += limb(J.leg2, farC);
-  if (J.arm2) s += ln(J.arm2.root, J.arm2.e, farC, 6) + ln(J.arm2.e, J.arm2.h, farC, 6);
-  s += ln(J.hip, J.sh, NEAR, 9);
-  if (P.front) s += ln([J.sh[0] - 16, J.sh[1]], [J.sh[0] + 16, J.sh[1]], NEAR, 8) + ln([J.hip[0] - 8, J.hip[1]], [J.hip[0] + 8, J.hip[1]], NEAR, 8);
-  s += `<circle cx="${f1(J.head[0])}" cy="${f1(J.head[1])}" r="10" fill="${NEAR}"/>`;
-  s += limb(J.leg, NEAR);
+  if (J.leg2) s += leg(J.leg2, !far);
+  if (J.arm2) s += arm(J.arm2, !far);
+  /* torso: shorts at the hip, bare midriff, red top over the chest */
+  const tw = P.front ? 26 : 19;
+  if (P.front) s += ln([J.hip[0] - 7, J.hip[1]], [J.hip[0] + 7, J.hip[1]], SHORTS, 16);
+  s += ln(J.hip, mix(J.hip, J.sh, .3), SHORTS, tw) + ln(mix(J.hip, J.sh, .28), mix(J.hip, J.sh, .55), SKIN, tw - 3) + ln(mix(J.hip, J.sh, .52), J.sh, TOP, tw);
+  if (P.front) s += ln([J.sh[0] - 13, J.sh[1] + 2], [J.sh[0] + 13, J.sh[1] + 2], TOP, 12);
+  /* neck + head with hair and bun */
+  const up = P.t + (P.ht || 0), H = J.head, at = (len, ang) => add(H, pol(len, ang));
+  s += ln(J.sh, mix(J.sh, H, .55), SKIN, 7);
+  if (P.front) { const bun = at(11, up); s += `<circle cx="${f1(bun[0])}" cy="${f1(bun[1])}" r="5.5" fill="${HAIR}"/><circle cx="${f1(H[0])}" cy="${f1(H[1])}" r="11" fill="${HAIR}"/>`;
+    const face = at(2, up + 180); s += `<circle cx="${f1(face[0])}" cy="${f1(face[1])}" r="9" fill="${SKIN}"/>`; }
+  else { const bun = add(at(9, up + 90), pol(4, up)), cap = at(1.6, up + 90), face = at(2.2, up - 90);
+    s += `<circle cx="${f1(bun[0])}" cy="${f1(bun[1])}" r="5.5" fill="${HAIR}"/><circle cx="${f1(cap[0])}" cy="${f1(cap[1])}" r="11" fill="${HAIR}"/><circle cx="${f1(face[0])}" cy="${f1(face[1])}" r="8.6" fill="${SKIN}"/>`; }
+  s += leg(J.leg, true);
   return s;
 }
-const nearArm = J => J.arm ? ln(J.arm.root, J.arm.e, NEAR, 6) + ln(J.arm.e, J.arm.h, NEAR, 6) : "";
+const nearArm = J => J.arm ? ln(J.arm.root, J.arm.e, SKIN, 8.5) + ln(J.arm.e, J.arm.h, SKIN, 7.5) + `<circle cx="${f1(J.arm.h[0])}" cy="${f1(J.arm.h[1])}" r="4.3" fill="${SKIN}"/>` : "";
 
 /* exercises: frames are merged onto the previous frame, so only changes are listed */
 const EX = {
@@ -207,8 +221,8 @@ const EX = {
         ln([32, 100], hand, c, 2.5) +
         `<path d="M 158 66 A 40 40 0 0 0 100 64" fill="none" stroke="#c2c7cf" stroke-width="2"/><path d="M 104 58 L 98 64 L 106 68" fill="none" stroke="#c2c7cf" stroke-width="2"/>` +
         txt(130, 50, "cáp muốn kéo thân xoay", "middle") +
-        ln(shL, eL, FAR, 6) + ln(eL, hL, FAR, 6) + ln(shR, eR, NEAR, 6) + ln(eR, hR, NEAR, 6) +
-        ln(shL, shR, NEAR, 14) + `<circle cx="130" cy="92" r="12" fill="${NEAR}"/>` +
+        ln(shL, eL, SKIN2, 8) + ln(eL, hL, SKIN2, 7) + ln(shR, eR, SKIN, 8) + ln(eR, hR, SKIN, 7) +
+        ln(shL, shR, TOP, 16) + `<circle cx="130" cy="92" r="12" fill="${HAIR}"/><circle cx="130" cy="84" r="5" fill="${HAIR}"/>` +
         `<circle cx="${f1(hand[0])}" cy="${f1(hand[1])}" r="5" fill="${BAR}"/>` + txt(130, 192, "ngực luôn hướng thẳng", "middle");
     },
     cues: ["Đứng ngang cột cáp, tay cầm ở giữa ngực.", "Đẩy thẳng ra trước, giữ 1–2 giây.", "Thân không xoay về phía cột, rồi thu tay về."],

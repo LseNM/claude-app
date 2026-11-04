@@ -27,4 +27,24 @@ Object.assign(EX, {
     cues: ["Hai tay cầm một tạ tay ở trên vai một bên, chân rộng hơn vai.", "Kéo chéo xuống ngoài gối bên kia, xoay từ thân và hông.", "Đi lên chậm, có kiểm soát; đủ rep rồi đổi bên."],
     bad: "chỉ vung bằng tay, thân không xoay." }
 });
-for (const k of ["dbrow", "pullover", "birddog", "dbchop"]) { const fr = EX[k].frames; for (let i = 1; i < fr.length; i++) fr[i] = Object.assign({}, fr[i - 1], fr[i]); }
+/* v2: athlete figures for the 5 accessory lifts (were emoji only). tag "extra" = Bài phụ. */
+Object.assign(EX, {
+  curl: { name: "DB curl", vi: SIMPLE_EX.curl.vi, tag: "extra",
+    frames: [{ hip: [100, 102], t: 180, foot: [104, 180], foot2: [96, 180], hand: [104, 106], hand2: [100, 106], eb: -1, eb2: -1 }, { hand: [118, 60], hand2: [114, 60] }],
+    front: (J, P, c) => db(J.arm.h, c), cues: SIMPLE_EX.curl.cues, bad: SIMPLE_EX.curl.bad },
+  triceps: { name: "Triceps overhead", vi: SIMPLE_EX.triceps.vi, tag: "extra",
+    frames: [{ hip: [100, 120], t: 180, foot: [106, 180], foot2: [94, 180], hand: [80, 52], hand2: [80, 52], eb: 1, eb2: 1 }, { hand: [102, 18], hand2: [102, 18] }],
+    front: (J, P, c) => dbv(J.arm.h, c), cues: SIMPLE_EX.triceps.cues, bad: SIMPLE_EX.triceps.bad },
+  rfly: { name: "DB reverse fly", vi: SIMPLE_EX.rfly.vi, tag: "extra",
+    frames: [{ hip: [86, 104], t: 128, foot: [92, 180], foot2: [84, 180], hand: [128, 126], hand2: [124, 126], eb: 1, eb2: 1 }, { hand: [146, 94], hand2: [118, 92] }],
+    front: (J, P, c) => db(J.arm.h, c), cues: SIMPLE_EX.rfly.cues, bad: SIMPLE_EX.rfly.bad },
+  facepull: { name: "Face pull", vi: SIMPLE_EX.facepull.vi, tag: "extra",
+    frames: [{ hip: [90, 102], t: 186, foot: [98, 180], foot2: [80, 180], hand: [146, 50], hand2: [144, 52], eb: -1, eb2: -1 }, { hand: [104, 36], hand2: [102, 38] }],
+    back: J => ln([198, 8], [198, 180], MS, 6) + `<circle cx="192" cy="50" r="5" fill="${MF}" stroke="${MS}" stroke-width="2"/>` + ln(J.arm.h, [192, 50], BAR, 2),
+    cues: SIMPLE_EX.facepull.cues, bad: SIMPLE_EX.facepull.bad },
+  assist: { name: "Assisted pull-up", vi: SIMPLE_EX.assist.vi, tag: "extra",
+    frames: [{ hip: [100, 118], t: 180, foot: [62, 158], foot2: [60, 158], kb: -1, kb2: -1, fang: -90, fang2: -90, hand: [104, 12], hand2: [100, 12], eb: -1, eb2: -1 }, { hip: [100, 86], foot: [62, 126], foot2: [60, 126] }],
+    back: J => ln([60, 10], [160, 10], MS, 6) + ln([160, 10], [160, 180], MS, 6) + box(62, Math.round(J.leg.k[1] + 6), 56, 8) + ln([150, J.leg.k[1] + 14], [150, 180], MS, 4),
+    cues: SIMPLE_EX.assist.cues, bad: SIMPLE_EX.assist.bad }
+});
+for (const k of ["dbrow", "pullover", "birddog", "dbchop", "curl", "triceps", "rfly", "facepull", "assist"]) { const fr = EX[k].frames; for (let i = 1; i < fr.length; i++) fr[i] = Object.assign({}, fr[i - 1], fr[i]); }
