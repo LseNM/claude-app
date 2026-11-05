@@ -3,7 +3,7 @@
    personal JSON that each device imports once — never in this file.
    Sources: vault 2. Areas/Health — Challenge.html, Body Recomposition.html, Diet/Thực đơn 1 ngày - 1540 kcal.html,
    Strength Training/*. */
-const APP_VERSION = "2.0.1";
+const APP_VERSION = "2.0.2";
 const START = new Date(2026, 10, 9), END = new Date(2027, 0, 31), TET = new Date(2027, 1, 6);
 const NOMACHINE_UNTIL = new Date(2026, 10, 30);
 const TARGET = { kcal: 1540, protein: 118, proteinMin: 110, fiber: 20, water: 2.5, steps: 7000, sleep: 7.5 };

@@ -1,5 +1,5 @@
 /* Offline support: cache the app shell; network-first for HTML so updates arrive, cache-first for the rest. Bump VERSION on every release. */
-const VERSION = "tetbody-2.0.1";
+const VERSION = "tetbody-2.0.2";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "css/app.css", "css/app2.css", "css/food.css", "css/v2.css", "js/fx.js", "js/data.js", "js/store.js", "js/ex.js", "js/ex-extra.js", "js/foods.js", "js/form.js", "js/app.js",
   "js/ai.js", "js/v-today.js", "js/v-gym.js", "js/v-plan.js", "js/v-food-lib.js", "js/v-food.js", "icons/icon-192.png", "icons/icon-512.png", "icons/maskable-512.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });

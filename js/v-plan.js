@@ -34,9 +34,7 @@
       <div class="tscroll"><table class="nt"><tr><th>Nếu SMM tăng</th><th class="n">Cân nặng</th><th class="n">Mỡ phải giảm</th><th class="n">BMI</th></tr>
         ${sc.map(s => `<tr class="${s.bmi && s.bmi < 18.5 ? "hi" : ""}"><td>${s.a ? "+" + fmt(s.a, 1) + " kg" : "giữ nguyên"}</td><td class="n">${fmt(s.w, 1)} kg</td><td class="n">−${fmt(s.need, 1)} kg</td><td class="n">${s.bmi ? fmt(s.bmi, 1) + (s.bmi < 18.5 ? " ⚠️" : "") : "—"}</td></tr>`).join("")}</table></div>
       <p class="small">${sc[0].bmi && sc[0].bmi < 18.5 ? `Chỉ giảm mỡ mà không tăng cơ thì phải xuống ${fmt(sc[0].w, 1)} kg, BMI ${fmt(sc[0].bmi, 1)} (dưới 18.5). ` : ""}Càng tăng được cơ thì càng phải giảm ít mỡ, nên lộ trình ưu tiên tập nặng + thâm hụt nhẹ.</p></section>
-    <section class="card"><h3>Mốc trên lộ trình</h3><div class="ibms">${ms.map(([id, lab, d]) => { const t = tg[id] || {}, got = (personal().inbody || {})[id] || {};
-        return `<div><b>${lab}</b><small>${d}</small><span class="num">PBF ${t.pbf ?? "—"}% · SMM ${t.smm ?? "—"} kg${t.fat ? ` · mỡ ${t.fat} kg` : ""}${t.w ? ` · cân ${t.w} kg` : ""}</span>${got.pbf != null ? `<em>đo được: PBF ${got.pbf}% · SMM ${got.smm ?? "—"}</em>` : ""}</div>`; }).join("")}</div>
-      <p class="note">Sửa target ở tab Gantt (bấm vào giai đoạn). Đo lại cùng điều kiện: sáng ~9:30, chưa ăn, chưa tập.</p></section>
+    ${stagesCard(r, tg)}
     <section class="card"><h3>App đã chỉnh theo kết quả này</h3><ul class="ibdo">
       <li><b>Cơ thiếu (${smmPct ? fmt(smmPct) + "% chuẩn" : "SMM thấp"})</b> → tập nặng còn 1–3 rep, app gợi ý lên tạ khi đủ rep; thêm curl + triceps cuối buổi A và C.</li>
       ${seg && seg.lean.ra[1] < seg.lean.la[1] ? `<li><b>Tay phải yếu hơn</b> → bài một tay (One-arm DB row) làm tay phải trước; nhắc ngay trong thẻ bài ở tab Gym.</li>` : ""}
@@ -44,6 +42,31 @@
       ${r.tbw != null && R.tbw && r.tbw < R.tbw[0] ? `<li><b>Nước dưới chuẩn (${r.tbw} L)</b> → 10 cốc (2.5 L) trên tab Hôm nay.</li>` : ""}
       ${r.prot != null && R.prot && r.prot < R.prot[0] ? `<li><b>Protein cơ thể dưới chuẩn</b> → protein ≥ 110 g mỗi ngày, đếm trên dải mục tiêu tuần.</li>` : ""}
       <li><b>Tư thế</b> → kéo nhiều hơn đẩy, có face pull / reverse fly mỗi tuần.</li></ul></section>`;
+  }
+  /* each stage from the InBody start to the target: dates, targets + change vs the stage before, pace per week, strength, to-dos */
+  function stagesCard(r, tg) {
+    const str = personal().strength || {}, inb = personal().inbody || {}, U = { w: "kg", waistD: "cm", pbf: "%", smm: "kg", fat: "kg" }, N = { w: "Cân TB", waistD: "Eo", pbf: "PBF", smm: "SMM", fat: "Mỡ" };
+    let prev = { w: r.w, waistD: 0, pbf: r.pbf, smm: r.smm, fat: r.fat };
+    const sgn = (v, k = 1) => (v > 0 ? "+" : v < 0 ? "−" : "±") + fmt(Math.abs(v), k);
+    const cards = PHASES.filter(p => p.id !== "prep").map((ph, i) => {
+      const t = tg[ph.id] || {}, wk = (days(ph.f, ph.t) + 1) / 7, now = TODAY >= ph.f && TODAY <= ph.t, past = TODAY > ph.t;
+      const rows = ["w", "waistD", "pbf", "smm", "fat"].filter(k => t[k] != null).map(k => {
+        const d = t[k] - prev[k], got = k === "w" ? (past || now ? avg7(minD(TODAY, ph.t)) : null) : ["pbf", "smm", "fat"].includes(k) ? (inb[ph.id] || {})[k] : null;
+        const ok = got != null && (k === "smm" ? got >= t[k] : got <= t[k]);
+        return `<div class="sr"><span>${N[k]}</span><b class="num">${k === "waistD" ? sgn(t[k], 1) : fmt(t[k], 1)} ${U[k]}</b><em class="num">${k === "waistD" ? "so với lần đo đầu" : `${sgn(d, 1)} so với ${i ? "chặng trước" : "30/10"}`}${k === "w" && !ph.faded && wk >= 1 && d ? ` · ${sgn(d / wk, 2)} kg/tuần` : ""}</em>${got != null ? `<i class="${ok ? "ok" : ""}">${ok ? "✓ đạt" : "hiện " + fmt(got, 1)}</i>` : ""}</div>`; }).join("");
+      ["w", "waistD", "pbf", "smm", "fat"].forEach(k => { if (t[k] != null) prev[k] = t[k]; });
+      const s = (str[ph.id] || []).map(([id, kg, rp]) => `${shortName(id)} ${kg} kg × ${rp}`).join(" · ");
+      return `<div class="stg ${now ? "now" : past ? "past" : ""} ${ph.faded ? "faded" : ""}" style="--pc:${ph.color}">
+        <div class="sh1"><b>${ph.name}</b><span class="chip ${now ? "red" : past ? "green" : ""}">${now ? "đang ở đây" : past ? "đã qua" : "sắp tới"}</span></div>
+        <div class="sd num">${dm(ph.f)} → ${dm(ph.t)}${ph.f.getFullYear() !== ph.t.getFullYear() ? "" : ""} · ${fmt(wk, wk % 1 ? 1 : 0)} tuần · ${esc(ph.focus)}</div>
+        ${rows || `<div class="small muted">Chưa đặt target số đo.</div>`}
+        ${s ? `<div class="ss"><span>Sức mạnh cuối chặng</span>${s}</div>` : ""}
+        ${ph.checklist.length ? `<ul class="sc">${ph.checklist.map(c => `<li>${esc(c)}</li>`).join("")}</ul>` : ""}</div>`; }).join("");
+    const T = tg.p4 || {}, fatLoss = T.fat != null ? r.fat - T.fat : null, wks = (days(new Date(2026, 10, 9), new Date(2027, 0, 31)) + 1) / 7;
+    return `<section class="card"><h3>Từng chặng tới target <span class="sub">từ InBody ${r.date.slice(8)}/${r.date.slice(5, 7)}</span></h3>
+      ${fatLoss != null ? `<p class="small" style="margin-top:0">12 tuần cần bớt <b>${fmt(fatLoss, 1)} kg mỡ</b> ≈ ${fmt(fatLoss / wks, 2)} kg/tuần ≈ ${fmt(fatLoss * 7700 / (wks * 7))} kcal thâm hụt mỗi ngày (quy ước 7,700 kcal ≈ 1 kg mỡ, số gần đúng), và thêm <b>${fmt((T.smm || r.smm) - r.smm, 1)} kg cơ</b>.</p>` : ""}
+      <div class="stgs">${cards}</div>
+      <p class="note">Cân là trung bình 7 ngày; eo so với lần đo đầu ở tab Hôm nay. PBF/SMM/mỡ chỉ kiểm được ở các lần InBody (19/12, 30/01). Sửa target: tab Gantt → bấm giai đoạn.</p></section>`;
   }
   /* every InBody sheet so far (from the personal file or "Chụp tờ InBody") */
   const ibHistory = () => { const L = personal().inbodyLog || []; if (!L.length) return "";
