@@ -3,6 +3,34 @@
 (() => {
   let sub = "gantt", sel = (phaseAt(TODAY) || PHASES[0]).id, zoom = "tet", weekOff = 0, monthOff = 0;
   const personal = () => { const p = Store.personal() || { kind: "tet-body-personal" }; p.targets = p.targets || {}; p.rewards = p.rewards || {}; p.strength = p.strength || {}; p.inbody = p.inbody || {}; return p; };
+  const lastIB = () => { const L = personal().inbodyLog || []; return L[L.length - 1]; };
+  /* weight target for any day: straight line from the last InBody weight through each phase-end target */
+  function weightTarget(d) {
+    const r = lastIB(), tg = personal().targets, pts = PHASES.filter(ph => ph.id !== "prep" && (tg[ph.id] || {}).w != null).map(ph => [ph.t, tg[ph.id].w]);
+    if (r && r.w) pts.unshift([new Date(r.date), r.w]); if (!pts.length) return null;
+    if (d <= pts[0][0]) return pts[0][1];
+    for (let i = 1; i < pts.length; i++) if (d <= pts[i][0]) { const [a, va] = pts[i - 1], [b, vb] = pts[i]; return va + (vb - va) * (d - a) / (b - a); }
+    return pts[pts.length - 1][1];
+  }
+  /* top of Gantt: the whole road read from the last InBody (start → 12-week target, why 1,540 kcal, what to prioritise) */
+  function ibRoad() {
+    const r = lastIB(), end = personal().targets.p4 || {}; if (!r) return "";
+    const D = s => `${s.slice(8)}/${s.slice(5, 7)}`, p4 = PHASES.find(p => p.id === "p4"), wks = Math.round(days(START, p4.t) / 7);
+    const cell = (lab, a, b, u) => a == null ? "" : `<div class="rc"><small>${lab}</small><b class="num">${fmt(a, 1)}<i>→</i>${b != null ? fmt(b, 1) : "?"}</b><em>${u}${b != null ? ` · ${b - a > 0 ? "+" : "−"}${fmt(Math.abs(b - a), 1)}` : ""}</em></div>`;
+    const tdee = r.bmr ? Math.round(r.bmr * 1.5 / 10) * 10 : null, gap = tdee ? tdee - TARGET.kcal : null;
+    const fl = end.fat != null && r.fat != null ? r.fat - end.fat : null, need = fl ? Math.round(fl * 7700 / (wks * 7)) : null;
+    const seg = r.seg, pri = [];
+    if (seg) { const arms = [seg.lean.la[1], seg.lean.ra[1]]; if (Math.min(...arms) < 90) pri.push(`💪 Tay ${fmt(Math.min(...arms), 1)}–${fmt(Math.max(...arms), 1)}% chuẩn → thêm curl, triceps, kéo`);
+      if (seg.lean.ra[1] < seg.lean.la[1] - 2) pri.push("✋ Tay phải yếu hơn → bài một tay làm tay phải trước");
+      if (seg.fat.tr[1] > 120) pri.push(`🎯 Mỡ thân ${fmt(seg.fat.tr[1])}% → eo là thước đo chính, ≥ 7,000 bước`); }
+    else if (r.smmStd && r.smm / r.smmStd < .9) pri.push("💪 Cơ thiếu → tập nặng, protein ≥ 110 g");
+    const R = r.range || {}; if (r.tbw != null && R.tbw && r.tbw < R.tbw[0]) pri.push(`💧 Nước ${r.tbw} L dưới chuẩn → 2.5 L mỗi ngày`);
+    return `<section class="card road"><h3>🧭 Lộ trình theo InBody ${D(r.date)} <a class="lnk ibl" href="#plan/inbody">chi tiết →</a></h3>
+      <div class="rcs">${cell("Cân", r.w, end.w, "kg")}${cell("PBF", r.pbf, end.pbf, "%")}${cell("SMM", r.smm, end.smm, "kg")}${cell("Mỡ", r.fat, end.fat, "kg")}</div>
+      <div class="small muted">Đo ${D(r.date)} · tập ${dm(START)} → ${dm(p4.t)} (${wks} tuần) · đích là InBody tuần 12</div>
+      ${tdee ? `<p class="rk">🔥 BMR ${fmt(r.bmr)} × ~1.5 vận động ≈ <b>${fmt(tdee)} kcal</b>. Ăn ${fmt(TARGET.kcal)} → thiếu ~${fmt(gap)} kcal/ngày${need ? `; cần ~${fmt(need)} kcal/ngày để bớt ${fmt(fl, 1)} kg mỡ → <b>${Math.abs(gap - need) <= 80 ? "giữ " + fmt(TARGET.kcal) + " kcal" : gap < need ? "thiếu hụt chưa đủ, theo dõi quy tắc tuần" : "dư thâm hụt, ưu tiên giữ cơ"}</b>` : ""}.</p>` : ""}
+      ${pri.length ? `<div class="rp">${pri.map(t => `<span>${esc(t)}</span>`).join("")}</div>` : ""}</section>`;
+  }
   const savePersonal = p => Store.setPersonal(p);
   /* ---------------- InBody: analysis of the latest sheet (numbers come from the personal file, never from the code) ---------------- */
   function inbody(el) {
@@ -58,7 +86,7 @@
       const s = (str[ph.id] || []).map(([id, kg, rp]) => `${shortName(id)} ${kg} kg × ${rp}`).join(" · ");
       return `<div class="stg ${now ? "now" : past ? "past" : ""} ${ph.faded ? "faded" : ""}" style="--pc:${ph.color}">
         <div class="sh1"><b>${ph.name}</b><span class="chip ${now ? "red" : past ? "green" : ""}">${now ? "đang ở đây" : past ? "đã qua" : "sắp tới"}</span></div>
-        <div class="sd num">${dm(ph.f)} → ${dm(ph.t)}${ph.f.getFullYear() !== ph.t.getFullYear() ? "" : ""} · ${fmt(wk, wk % 1 ? 1 : 0)} tuần · ${esc(ph.focus)}</div>
+        <div class="sd num">${dm(ph.f)} → ${dm(ph.t)}${ph.f.getFullYear() !== ph.t.getFullYear() ? "" : ""} · ${fmt(wk, wk % 1 ? 1 : 0)} tuần · ${esc(ph.focus)}</div>${ph.why ? `<div class="sw">📊 ${esc(ph.why)}</div>` : ""}
         ${rows || `<div class="small muted">Chưa đặt target số đo.</div>`}
         ${s ? `<div class="ss"><span>Sức mạnh cuối chặng</span>${s}</div>` : ""}
         ${ph.checklist.length ? `<ul class="sc">${ph.checklist.map(c => `<li>${esc(c)}</li>`).join("")}</ul>` : ""}</div>`; }).join("");
@@ -84,7 +112,7 @@
 
   /* ---------------- Gantt ---------------- */
   function gantt(el) {
-    el.innerHTML = `${noPersonal()}<section class="card gantt-card"><div class="hd"><h3>🗓️ Lộ trình tới Tết</h3><span class="muted small">Bấm một giai đoạn để xem và sửa target</span>
+    el.innerHTML = `${noPersonal()}${ibRoad()}<section class="card gantt-card"><div class="hd"><h3>🗓️ Lộ trình tới Tết</h3><span class="muted small">Bấm một giai đoạn để xem và sửa target</span>
       <div class="seg"><button data-z="tet" class="${zoom === "tet" ? "on" : ""}">Tới Tết</button><button data-z="all" class="${zoom === "all" ? "on" : ""}">Cả chặng 2</button></div></div>
       <div class="gscroll"><svg id="gantt" role="img" aria-label="Gantt các giai đoạn tới Tết"></svg></div></section><div class="detail" id="detail"></div>`;
     drawGantt(); detail();
@@ -143,7 +171,7 @@
     const state = TODAY > ph.t ? "Đã qua" : TODAY < ph.f ? `Bắt đầu sau ${days(TODAY, ph.f)} ngày` : `Còn ${days(TODAY, ph.t)} ngày`, pct = tot ? Math.round(done / tot * 100) : 0, C = 2 * Math.PI * 24;
     const str = p.strength[ph.id] || [];
     $("#detail").innerHTML = `
-    <div class="card phase-head"><span class="dot" style="background:${ph.color}"></span><div><h2>${ph.name}</h2><div class="meta">${dm(ph.f)} → ${dm(ph.t)}${ph.weeks ? " · " + ph.weeks : ""} · ${ph.focus}</div></div>
+    <div class="card phase-head"><span class="dot" style="background:${ph.color}"></span><div><h2>${ph.name}</h2><div class="meta">${dm(ph.f)} → ${dm(ph.t)}${ph.weeks ? " · " + ph.weeks : ""} · ${ph.focus}</div>${ph.why ? `<div class="why2">📊 ${esc(ph.why)}</div>` : ""}</div>
       <span class="chip ${TODAY >= ph.f && TODAY <= ph.t ? "red" : ""}">${TODAY >= ph.f && TODAY <= ph.t ? "📍 Đang ở đây · " : ""}${state}</span>
       <div class="ring"><svg width="62" height="62" viewBox="0 0 62 62" aria-hidden="true"><circle cx="31" cy="31" r="24" fill="none" stroke="#fdf0e0" stroke-width="8"/><circle cx="31" cy="31" r="24" fill="none" stroke="${ph.color}" stroke-width="8" stroke-linecap="round" stroke-dasharray="${C * pct / 100} ${C}" transform="rotate(-90 31 31)"/><text x="31" y="36" text-anchor="middle" font-size="15" font-weight="800" fill="#2b1d14">${pct}%</text></svg><span class="muted small" style="font-weight:600">checklist<br>${done}/${tot} xong</span></div></div>
     <div class="card"><h3>🎯 Target số đo <span class="sub">sửa ô đỏ được</span></h3>${metricRows(ph)}${(personal().inbodyLog || []).length ? `<a class="lnk ibl" href="#plan/inbody">Xem phân tích InBody ${(personal().inbodyLog.slice(-1)[0].date || "").slice(8)}/${(personal().inbodyLog.slice(-1)[0].date || "").slice(5, 7)} →</a>` : ""}<p class="muted small" style="margin:10px 0 0">Cân TB 7 ngày và eo lấy từ số bạn ghi ở tab Hôm nay. PBF/SMM/Mỡ: gõ kết quả InBody vào ô "Hiện tại", hoặc chụp tờ kết quả để AI đọc giúp.</p>
@@ -179,7 +207,7 @@
   /* ---------------- Week ---------------- */
   function week(el) {
     const mon = addD(TODAY, -((TODAY.getDay() + 6) % 7) + weekOff * 7), sun = addD(mon, 6), wk = [...Array(7)].map((_, i) => addD(mon, i));
-    const endRef = minD(sun, TODAY), w = avg7(endRef), wp = avg7(addD(endRef, -7));
+    const endRef = minD(sun, TODAY), w = avg7(endRef), wp = avg7(addD(endRef, -7)), tw = weightTarget(sun);
     const waistIn = waistLog().filter(x => x[0] >= mon && x[0] <= sun), waistPrev = waistLog().filter(x => x[0] < mon);
     const gymDone = wk.filter(d => { const g = Store.gym(iso(d)); return g && g.finished; }).length;
     const past = wk.filter(d => d <= TODAY), avgScore = past.length ? past.reduce((a, d) => a + scoreOn(d), 0) / past.length : 0;
@@ -196,7 +224,7 @@
     const st = (lab, v, unit, d, cls) => `<div class="stat"><small>${lab}</small><b>${v} <span>${unit}</span></b><div class="d ${cls || ""}">${d}</div></div>`;
     el.innerHTML = `<section class="card"><div class="whd"><div class="nav"><button id="wPrev" aria-label="Tuần trước">‹</button><button id="wNext" aria-label="Tuần sau">›</button></div>
         <h2>${wlabel} · ${dm(mon)} – ${dm(sun)}</h2>${phaseAt(mon) ? `<span class="chip">${phaseAt(mon).name}</span>` : ""}${mon <= NOMACHINE_UNTIL ? '<span class="chip green">🏠 không máy</span>' : ""}</div>
-      <div class="stats">${st("Cân TB 7 ngày", w ? fmt(w, 1) : "—", "kg", w && wp ? `${w <= wp ? "▼" : "▲"} ${fmt(Math.abs(wp - w), 1)} so với tuần trước` : "cần số cân", w && wp && w <= wp ? "good" : "")}
+      <div class="stats">${st("Cân TB 7 ngày", w ? fmt(w, 1) : "—", "kg", `${tw ? `target CN ≤ ${fmt(tw, 1)}${w ? (w <= tw ? " ✓" : ` · còn ${fmt(w - tw, 1)}`) : ""}` : ""}${w && wp ? `${tw ? "<br>" : ""}${w <= wp ? "▼" : "▲"} ${fmt(Math.abs(wp - w), 1)} so với tuần trước` : tw ? "" : "cần số cân"}`, w && tw ? (w <= tw ? "good" : "") : w && wp && w <= wp ? "good" : "")}
         ${st("Vòng eo", waistIn.length ? fmt(waistIn[waistIn.length - 1][1], 1) : "—", "cm", waistIn.length && waistPrev.length ? `${waistIn[waistIn.length - 1][1] <= waistPrev[waistPrev.length - 1][1] ? "▼" : "▲"} ${fmt(Math.abs(waistPrev[waistPrev.length - 1][1] - waistIn[waistIn.length - 1][1]), 1)} cm` : "đo thứ Hai", "good")}
         ${st("Buổi gym", gymDone, "/ 3", gymDone >= 3 ? "✓ đủ buổi" : "", gymDone >= 3 ? "good" : "")}${st("Checklist TB", Math.round(avgScore * 100), "%", past.length ? `${past.length} ngày đã qua` : "", avgScore >= KEEP ? "good" : "")}</div></section>
     <div class="days">${wk.map(d => { const p = WEEK_PLAN[d.getDay()], sc = scoreOn(d), isT = +d === +TODAY, fut = d > TODAY, g = Store.gym(iso(d)), wt = weightOn(d);

@@ -3,7 +3,7 @@
    personal JSON that each device imports once — never in this file.
    Sources: vault 2. Areas/Health — Challenge.html, Body Recomposition.html, Diet/Thực đơn 1 ngày - 1540 kcal.html,
    Strength Training/*. */
-const APP_VERSION = "2.0.2";
+const APP_VERSION = "2.0.3";
 const START = new Date(2026, 10, 9), END = new Date(2027, 0, 31), TET = new Date(2027, 1, 6);
 const NOMACHINE_UNTIL = new Date(2026, 10, 30);
 const TARGET = { kcal: 1540, protein: 118, proteinMin: 110, fiber: 20, water: 2.5, steps: 7000, sleep: 7.5 };
@@ -72,6 +72,9 @@ const PHASES = [
   { id: "s2", name: "Chặng 2 sau Tết", from: [2027, 1, 7], to: [2027, 3, 30], color: "#c9b8a6", faded: true, focus: "Lập chi tiết sau Tết", checklist: [] }
 ];
 PHASES.forEach(p => { p.f = new Date(...p.from); p.t = new Date(...p.to); });
+/* the personal file can add InBody-based notes per phase: plan: { p1: { why: "…", add: ["checklist item", …] } }.
+   Added items go after the public ones, so ticks already saved keep their index. */
+function applyPlan(pl) { PHASES.forEach(ph => { ph.base = ph.base || ph.checklist; const x = (pl || {})[ph.id] || {}; ph.checklist = ph.base.concat(x.add || []); ph.why = x.why || ""; }); }
 const MILESTONES = [[new Date(2026, 11, 19), "InBody tuần 6", "📊"], [new Date(2027, 0, 30), "InBody tuần 12", "📊"], [TET, "Tết", "🏮"], [new Date(2027, 3, 30), "Mốc PBF ~24%", "🎯"]];
 /* metric keys a phase can target (values in personal file): w = cân TB 7 ngày, waistD = eo so với lần đo đầu (cm), pbf, smm, fat */
 const METRIC_DEF = { w: ["Cân TB 7 ngày", "kg", -1], waistD: ["Vòng eo (so với lần đo đầu)", "cm", -1], pbf: ["PBF (InBody)", "%", -1], smm: ["SMM (InBody)", "kg", 1], fat: ["Mỡ (InBody)", "kg", -1] };

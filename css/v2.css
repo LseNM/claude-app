@@ -170,3 +170,16 @@ table.sets tr.ok .tk { background: var(--green); border-color: var(--green); col
   .icons { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .gpanel { grid-template-columns: 1fr 1fr; }
 }
+
+/* v2.0.3 · roadmap read from the last InBody (top of Gantt) + per-phase "why" */
+.road h3 { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; } .road h3 .ibl { margin: 0 0 0 auto; font-size: 13.5px; }
+.rcs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-bottom: 6px; }
+.rc { background: var(--bg); border-radius: 12px; padding: 7px 8px; min-width: 0; }
+.rc small { display: block; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.rc b { font-size: 16px; white-space: nowrap; } .rc b i { font-style: normal; color: var(--muted); font-weight: 600; margin: 0 2px; }
+.rc em { display: block; font-style: normal; font-size: 11.5px; font-weight: 700; color: var(--green); }
+.rk { font-size: 13.5px; margin: 8px 0 6px; color: var(--ink2); }
+.rp { display: flex; flex-wrap: wrap; gap: 6px; } .rp span { background: var(--bg2); border-radius: 999px; padding: 4px 10px; font-size: 12.5px; font-weight: 700; color: var(--ink2); }
+.why2 { margin-top: 6px; font-size: 13.5px; font-weight: 600; color: var(--ink2); background: var(--bg); border-radius: 10px; padding: 6px 10px; }
+.sw { font-size: 12.5px; color: var(--ink2); }
+@media (max-width: 420px) { .rcs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

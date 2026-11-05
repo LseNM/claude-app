@@ -254,7 +254,7 @@ function fitTrackerCSV(text) {
 const VIEWS = {};
 const currentView = () => { const v = (location.hash || "#today").slice(1).split("/")[0]; return VIEWS[v] ? v : "today"; };
 function render() {
-  const v = currentView(); markNav(); const el = $("#view"); el.innerHTML = ""; el.onclick = null; el.className = "wrap v-" + v; VIEWS[v](el);
+  const v = currentView(); applyPlan(P().plan); markNav(); const el = $("#view"); el.innerHTML = ""; el.onclick = null; el.className = "wrap v-" + v; VIEWS[v](el);
   AI.banner(); el.insertAdjacentHTML("afterbegin", goalStrip());
   window.scrollTo(0, 0);
 }
